@@ -419,3 +419,15 @@ test("a background architect's advice is read from its hand-back", async ($, on)
   expect(await ui.find({ text: /» Ship it after one more gate test\./ })).toBeDefined()
   await ui.unmount()
 })
+
+test('the fleet panel draws on every surface once a fleet script is set, even before data', { options: { fleetScript: '/x/fleet.py' } }, async ($, on) => {
+  engine(on)
+  for (const surface of ['terminal', 'desktop', 'vscode', 'mobile'] as const) {
+    for (const cols of [40, 86, 120]) {
+      const ui = await $.ui.mount({ ...pane(cols), surface })
+      expect(await ui.find({ text: /FLEET/ })).toBeDefined()
+      expect(await ui.find({ text: /loading/ })).toBeDefined()
+      await ui.unmount()
+    }
+  }
+})
