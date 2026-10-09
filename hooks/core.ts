@@ -92,8 +92,7 @@ export const normalizeLog = (stored: unknown): LogLine[] =>
 // ---------------------------------------------------------------- config
 
 export type Panel = 'main' | 'architect' | 'gate' | 'agents' | 'loops' | 'receipt' | 'fleet' | 'log'
-const PANELS: readonly Panel[] = ['main', 'architect', 'gate', 'agents', 'loops', 'receipt', 'log']
-const KNOWN_PANELS: readonly string[] = [...PANELS, 'fleet']
+const PANELS: readonly Panel[] = ['main', 'architect', 'gate', 'agents', 'loops', 'receipt', 'fleet', 'log']
 
 export type Config = {
   architect: RegExp
@@ -129,20 +128,17 @@ export const parseConfig = (o: Readonly<Record<string, unknown>>): Config => {
   const panels = str('panels', PANELS.join(','))
     .split(',')
     .map(s => s.trim())
-    .filter((p): p is Panel => KNOWN_PANELS.includes(p))
+    .filter((p): p is Panel => (PANELS as readonly string[]).includes(p))
   const fleet = bool('fleet', true)
   const fleetScript = str('fleetScript', '')
   const base = panels.length > 0 ? [...new Set(panels)] : [...PANELS]
-  // The fleet panel sits just above the log unless the panels list places it.
-  const withFleet: Panel[] = base.includes('fleet') ? base : base.flatMap(p => (p === 'log' ? ['fleet' as const, p] : [p]))
-  if (!withFleet.includes('fleet')) withFleet.push('fleet')
   const layout = str('layout', 'auto')
   const max = typeof o.maxCards === 'number' ? Math.round(o.maxCards) : 3
   return {
     architect: safeRegExp(str('architectPattern', ''), 'advisor|architect'),
     architectLabel: str('architectLabel', 'ARCHITECT'),
     gateLabel: str('gateLabel', 'GATE'),
-    panels: fleet ? withFleet : base.filter(p => p !== 'fleet'),
+    panels: fleet ? base : base.filter(p => p !== 'fleet'),
     fleet,
     fleetScript,
     motion: str('motion', 'while-active') !== 'off',

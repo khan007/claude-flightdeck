@@ -1,6 +1,6 @@
 {
   "name": "flightdeck",
-  "version": "0.3.6",
+  "version": "0.3.7",
   "description": "Flightdeck: a live agent dashboard for Claude Code. Main model vitals, an on-call architect, every permission check, subagent cards and swimlanes, a turn receipt and a session log, all from real session events",
   "author": {
     "name": "Stephen Casella",
@@ -41,9 +41,9 @@
     },
     "panels": {
       "title": "Panels",
-      "description": "Comma-separated panels in display order: main, architect, gate, agents, loops, receipt, log. Leave one out to hide it.",
+      "description": "Comma-separated panels in display order: main, architect, gate, agents, loops, receipt, log, fleet. Leave one out to hide it.",
       "type": "string",
-      "default": "main,architect,gate,agents,loops,receipt,log"
+      "default": "main,architect,gate,agents,loops,receipt,fleet,log"
     },
     "motion": {
       "title": "Motion",

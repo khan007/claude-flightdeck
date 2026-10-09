@@ -120,6 +120,7 @@ declare module 'claude-code' {
       view: View
       roster: Roster
       fleet: Fleet
+      version: string
     }
   }
 }

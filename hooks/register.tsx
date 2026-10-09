@@ -78,6 +78,8 @@ const view = atom({ plugin: 'flightdeck', key: 'view' } as const, DEFAULT_VIEW)
 const roster = atom({ plugin: 'flightdeck', key: 'roster' } as const, DEFAULT_ROSTER)
 const fleet = atom({ plugin: 'flightdeck', key: 'fleet' } as const, { rows: [], todayUsd: null, error: null } as Fleet)
 
+const version = atom({ plugin: 'flightdeck', key: 'version' } as const, '')
+
 const FLEET_POLL_MS = 5000
 
 // Runs the user's fleet script (python3, read-only, JSON on stdout) and keeps the rows for the panel.
@@ -251,6 +253,13 @@ export const register: Register = (on, options) => {
       argumentHint: '[open|close|reset|layout auto|compact|wide|mini]',
     })
     await migrate($)
+    // The pane shows the plugin's own version, read from its manifest so it never drifts from a release.
+    try {
+      const manifest = JSON.parse(await $.fs.read(`${$.plugin.root}/.claude-plugin/plugin.json`)) as { version?: string }
+      await update($, version, () => String(manifest.version ?? ''))
+    } catch (err) {
+      $.ui.log(`flightdeck: could not read its version: ${String(err)}`, { to: 'debug' })
+    }
     // A host without usage (headless, an SDK host, a session not yet bound) just starts without it.
     const u = await $.session.usage().catch(() => null)
     if (u) {
@@ -554,7 +563,7 @@ export const register: Register = (on, options) => {
     const els = $.ui.resolve(e)
     const { Box, Text, Button } = els
     const hasClient = 'Client' in els
-    const [m, u, a, g, cards, lp, lines, t, r, v, now, fl] = await Promise.all([
+    const [m, u, a, g, cards, lp, lines, t, r, v, now, fl, ver] = await Promise.all([
       getMain($),
       getUsage($),
       getArchitect($),
@@ -567,6 +576,7 @@ export const register: Register = (on, options) => {
       getView($),
       $.clock.now(),
       read($, fleet),
+      read($, version),
     ])
     const W = Math.max(40, e.props.bodyColumns)
     const layout = v.layout ?? cfg.layout
@@ -1172,6 +1182,11 @@ export const register: Register = (on, options) => {
         </Box>
         {body}
         {svgLanes}
+        {ver ? (
+          <Box justifyContent="flex-end">
+            <Text dimColor>{`v${ver}`}</Text>
+          </Box>
+        ) : null}
       </Box>
     )
   })
