@@ -990,7 +990,7 @@ export const register: Register = (on, options) => {
         {fl.todayUsd !== null ? <Text dimColor>{`today ${fmtUsd(fl.todayUsd)}`}</Text> : null}
         {fl.rows.length === 0 && !fl.error ? <Text dimColor>loading…</Text> : null}
         {fl.rows.slice(0, 6).map(x => {
-          const cost = ` · ${fmtUsd(x.costUsd)}${x.costIncomplete ? '+' : ''}`
+          const cost = ` · ${fmtUsd(x.todayCostUsd)} / ${fmtUsd(x.costUsd)}${x.costIncomplete ? '+' : ''}`
           // inside the frame: 2 border + 2 padding + 2 for the dot, then the cost stays whole
           const room = Math.max(8, w - 6 - cost.length)
           return (

@@ -162,16 +162,19 @@ def today_total():
 
 
 def session_cost(session_id):
-    total, unknown, model = 0.0, False, None
+    """(total USD, USD spent today, any unpriced model, last model) for one session."""
+    today = datetime.date.today().strftime("%Y-%m-%d")
+    total, today_cost, unknown, model = 0.0, 0.0, False, None
     for p in transcript_files(session_id):
         try:
             days, u, m = file_cost(p)
         except OSError:
             continue
         total += sum(days.values())
+        today_cost += days.get(today, 0.0)
         unknown = unknown or u
         model = m or model
-    return total, unknown, model
+    return total, today_cost, unknown, model
 
 
 def short_dir(cwd):
@@ -221,23 +224,23 @@ def render(show_all, color):
     rows = load(show_all)
     paint = (lambda c, s: f"\033[{c}m{s}\033[0m") if color else (lambda c, s: s)
     out = [f"SESSIONS ({len(rows)} running)    refreshed {time.strftime('%H:%M:%S')}", ""]
-    hdr = f"  {'STATUS':<9} {'NAME':<40} {'DIR':<26} {'AGE':<7} {'LAST ACTIVITY':<14} {'COST':>8}  MODEL"
+    hdr = f"  {'STATUS':<9} {'NAME':<40} {'DIR':<26} {'AGE':<7} {'LAST ACTIVITY':<14} {'TODAY / TOTAL':>18}  MODEL"
     out.append(paint("2", hdr))
     total, any_unknown = 0.0, False
     for d in rows:
         status = d.get("status", "?")
         dot = paint("32", "● busy   ") if status == "busy" else paint("2", f"○ {status:<7}")
         name = (d.get("name") or short_dir(d.get("cwd", "")))[:40]
-        cost, unknown, model = session_cost(d.get("sessionId", ""))
+        cost, today_cost, unknown, model = session_cost(d.get("sessionId", ""))
         total += cost
         any_unknown = any_unknown or unknown
-        cost_s = f"${cost:,.2f}" + ("+" if unknown else "")
+        cost_s = f"${today_cost:,.2f} / ${cost:,.2f}" + ("+" if unknown else "")
         last = ago(d.get("statusUpdatedAt") or d.get("updatedAt") or d.get("startedAt", now), now)
         mshort = (model or "?").replace("claude-", "")
         out.append(
             f"  {dot} {name:<40} "
             f"{short_dir(d.get('cwd', ''))[:26]:<26} {age(d.get('startedAt', now), now):<7} "
-            f"{last:<14} {cost_s:>8}  {mshort}"
+            f"{last:<14} {cost_s:>18}  {mshort}"
         )
     out.append("")
     out.append(
@@ -253,7 +256,7 @@ def as_json(show_all):
     now = time.time() * 1000
     out = []
     for d in load(show_all):
-        cost, unknown, model = session_cost(d.get("sessionId", ""))
+        cost, today_cost, unknown, model = session_cost(d.get("sessionId", ""))
         out.append({
             "id": d.get("sessionId"),
             "name": d.get("name") or short_dir(d.get("cwd", "")),
@@ -264,6 +267,7 @@ def as_json(show_all):
             "ageMs": int(now - d.get("startedAt", now)),
             "idleMs": int(now - (d.get("statusUpdatedAt") or d.get("updatedAt") or d.get("startedAt", now))),
             "costUsd": round(cost, 4),
+            "todayCostUsd": round(today_cost, 4),
             "costIncomplete": unknown,
             "model": (model or "?").replace("claude-", ""),
         })
