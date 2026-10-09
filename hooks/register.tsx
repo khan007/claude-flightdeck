@@ -698,7 +698,7 @@ export const register: Register = (on, options) => {
             {strip.length === 0 ? <Text color={C.faint}>no checks yet</Text> : null}
             {strip.map(c => (
               <Text color={verdictColor(c)} dimColor={c.inSubagent}>
-                {c.verdict === 'deny' ? '×' : '▇'}
+                {c.verdict === 'deny' ? 'x' : '|'}
               </Text>
             ))}
           </Text>
@@ -1024,7 +1024,7 @@ export const register: Register = (on, options) => {
               <Text dimColor>{`${cfg.gateLabel.toLowerCase()} `}</Text>
               {strip.map(c => (
                 <Text color={verdictColor(c)} dimColor={c.inSubagent}>
-                  {c.verdict === 'deny' ? '×' : '▇'}
+                  {c.verdict === 'deny' ? 'x' : '|'}
                 </Text>
               ))}
               <Text color={s.deny > 0 ? C.warn : s.ask > 0 ? C.amber : C.dim} wrap="truncate">
