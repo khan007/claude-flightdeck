@@ -1,7 +1,7 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
-import type { AgentCard, Architect, Bucket, Check, Gate, Layout, LogLine, Loop, Main, Roster, Turn, Usage, View } from '../types'
+import type { AgentCard, Architect, Bucket, Check, Fleet, FleetRow, Gate, Layout, LogLine, Loop, Main, Roster, Turn, Usage, View } from '../types'
 import {
   DEFAULT_ARCHITECT,
   DEFAULT_GATE,
@@ -76,6 +76,22 @@ const turn = atom({ plugin: 'flightdeck', key: 'turn' } as const, DEFAULT_TURN)
 const receipt = atom({ plugin: 'flightdeck', key: 'receipt' } as const, null)
 const view = atom({ plugin: 'flightdeck', key: 'view' } as const, DEFAULT_VIEW)
 const roster = atom({ plugin: 'flightdeck', key: 'roster' } as const, DEFAULT_ROSTER)
+const fleet = atom({ plugin: 'flightdeck', key: 'fleet' } as const, { rows: [], error: null } as Fleet)
+
+const FLEET_POLL_MS = 5000
+
+// Runs the user's fleet script (python3, read-only, JSON on stdout) and keeps the rows for the panel.
+async function refreshFleet($: EngineInterface, script: string) {
+  try {
+    const run = await $.process.run(['python3', '-I', script, '--json'], { timeoutMs: 20000 })
+    if (run.exitCode !== 0) throw new Error(run.stderr.trim().split('\n').pop() || `exit ${run.exitCode}`)
+    const rows = JSON.parse(run.stdout) as FleetRow[]
+    await update($, fleet, () => ({ rows, error: null }))
+  } catch (err) {
+    $.ui.log(`flightdeck: fleet refresh failed: ${String(err)}`, { to: 'debug' })
+    await update($, fleet, x => ({ rows: x.rows, error: String(err) }))
+  }
+}
 
 type ServerBlock = { type: string; id?: string; name?: string; tool_use_id?: string }
 
@@ -236,6 +252,10 @@ export const register: Register = (on, options) => {
       }))
     }
     if (cfg.openOnStart) void openPane($).catch(() => undefined)
+    if (cfg.fleetScript) {
+      void refreshFleet($, cfg.fleetScript)
+      $.clock.every(FLEET_POLL_MS, () => refreshFleet($, cfg.fleetScript))
+    }
     await refreshStatus($, cfg)
     return next(e)
   })
@@ -521,7 +541,7 @@ export const register: Register = (on, options) => {
     const els = $.ui.resolve(e)
     const { Box, Text, Button } = els
     const hasClient = 'Client' in els
-    const [m, u, a, g, cards, lp, lines, t, r, v, now] = await Promise.all([
+    const [m, u, a, g, cards, lp, lines, t, r, v, now, fl] = await Promise.all([
       getMain($),
       getUsage($),
       getArchitect($),
@@ -533,6 +553,7 @@ export const register: Register = (on, options) => {
       read($, receipt),
       getView($),
       $.clock.now(),
+      read($, fleet),
     ])
     const W = Math.max(40, e.props.bodyColumns)
     const layout = v.layout ?? cfg.layout
@@ -552,6 +573,7 @@ export const register: Register = (on, options) => {
       agents: cards.length === 0,
       loops: lp.length === 0,
       receipt: !m.isRunning && !r,
+      fleet: fl.rows.length === 0,
       log: false,
     }
     const panels = cfg.panels.filter(p => !isEmpty[p])
@@ -931,6 +953,28 @@ export const register: Register = (on, options) => {
       </Box>
     )
 
+    // ---- fleet: running sessions with their estimated cost (from the user's fleet script)
+    const fleetTotal = fl.rows.reduce((sum, x) => sum + x.costUsd, 0)
+    const fleetPanel = (w: number) => (
+      <Box flexDirection="column" borderStyle="round" borderColor={C.faint} paddingX={1} width={w}>
+        <Box justifyContent="space-between">
+          <Text color={C.main} bold>
+            {`FLEET · ${fl.rows.length} running`}
+          </Text>
+          <Text dimColor>{`≈ ${fmtUsd(fleetTotal)}`}</Text>
+        </Box>
+        {fl.rows.slice(0, 6).map(x => (
+          <Text wrap="truncate">
+            <Text color={x.status === 'busy' ? C.gate : C.dim}>{x.status === 'busy' ? '● ' : '○ '}</Text>
+            <Text bold={x.status === 'busy'}>{x.name}</Text>
+            <Text dimColor>{` · ${fmtUsd(x.costUsd)}${x.costIncomplete ? '+' : ''}`}</Text>
+          </Text>
+        ))}
+        {fl.rows.length > 6 ? <Text dimColor>{`+${fl.rows.length - 6} more`}</Text> : null}
+        {fl.error ? <Text color={C.warn} wrap="truncate">{`refresh failed: ${fl.error}`}</Text> : null}
+      </Box>
+    )
+
     const draw = (p: Panel, w: number) =>
       p === 'main'
         ? mainPanel(w)
@@ -944,7 +988,9 @@ export const register: Register = (on, options) => {
                 ? loopsPanel(w)
                 : p === 'receipt'
                   ? receiptPanel(w)
-                  : logPanel(w)
+                  : p === 'fleet'
+                    ? fleetPanel(w)
+                    : logPanel(w)
 
     // Panels with the flow between them; the agents panel draws its own rails.
     const column = (ps: Panel[], w: number) => (
@@ -952,7 +998,7 @@ export const register: Register = (on, options) => {
         {ps.map((p, i) => {
           const prev = ps[i - 1]
           const link =
-            i === 0 || p === 'agents' || prev === 'agents' || p === 'log' || p === 'loops' || prev === 'loops'
+            i === 0 || p === 'agents' || prev === 'agents' || p === 'log' || p === 'fleet' || prev === 'fleet' || p === 'loops' || prev === 'loops'
               ? null
               : rail(`link-${p}`, p === 'architect' ? advising : m.isRunning, p === 'architect' ? C.arch : C.main, w)
           return (
@@ -1069,7 +1115,7 @@ export const register: Register = (on, options) => {
       <Box flexDirection="column">
         <Box columnGap={2}>
           {column(panels.filter(p => p === 'main' || p === 'architect' || p === 'gate'), colW)}
-          {column(panels.filter(p => p === 'agents' || p === 'loops' || p === 'receipt'), colW)}
+          {column(panels.filter(p => p === 'agents' || p === 'loops' || p === 'receipt' || p === 'fleet'), colW)}
         </Box>
         {panels.includes('log') ? logPanel(W) : null}
       </Box>

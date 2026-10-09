@@ -101,6 +101,12 @@
       "type": "boolean",
       "default": true
     },
+    "fleetScript": {
+      "title": "Fleet script",
+      "description": "Absolute path to fleet.py (sessions list with cost). Setting it adds a FLEET panel and runs that script with python3 every 5 seconds while the pane is open. Leave empty to keep it off.",
+      "type": "string",
+      "default": ""
+    },
     "statusLine": {
       "title": "Status line",
       "description": "Show context, agents, consults and denials in the status line",

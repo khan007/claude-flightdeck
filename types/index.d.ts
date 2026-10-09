@@ -90,6 +90,19 @@ export type View = { expanded: string | null; gateOpen: Bucket | null; layout: L
 
 export type Roster = { architectTypes: string[] }
 
+export type FleetRow = {
+  id: string
+  name: string
+  dir: string
+  status: string
+  ageMs: number
+  idleMs: number
+  costUsd: number
+  costIncomplete: boolean
+  model: string
+}
+export type Fleet = { rows: FleetRow[]; error: string | null }
+
 declare module 'claude-code' {
   interface PluginState {
     'flightdeck': {
@@ -105,6 +118,7 @@ declare module 'claude-code' {
       receipt: Receipt | null
       view: View
       roster: Roster
+      fleet: Fleet
     }
   }
 }

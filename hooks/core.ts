@@ -91,14 +91,17 @@ export const normalizeLog = (stored: unknown): LogLine[] =>
 
 // ---------------------------------------------------------------- config
 
-export type Panel = 'main' | 'architect' | 'gate' | 'agents' | 'loops' | 'receipt' | 'log'
+export type Panel = 'main' | 'architect' | 'gate' | 'agents' | 'loops' | 'receipt' | 'fleet' | 'log'
 const PANELS: readonly Panel[] = ['main', 'architect', 'gate', 'agents', 'loops', 'receipt', 'log']
+const KNOWN_PANELS: readonly string[] = [...PANELS, 'fleet']
 
 export type Config = {
   architect: RegExp
   architectLabel: string
   gateLabel: string
   panels: Panel[]
+  /** Path to fleet.py; empty keeps the fleet panel off and runs no process. */
+  fleetScript: string
   motion: boolean
   moments: boolean
   matchDescriptions: boolean
@@ -124,14 +127,21 @@ export const parseConfig = (o: Readonly<Record<string, unknown>>): Config => {
   const panels = str('panels', PANELS.join(','))
     .split(',')
     .map(s => s.trim())
-    .filter((p): p is Panel => (PANELS as readonly string[]).includes(p))
+    .filter((p): p is Panel => KNOWN_PANELS.includes(p))
+  const fleetScript = str('fleetScript', '')
+  const base = panels.length > 0 ? [...new Set(panels)] : [...PANELS]
+  // A configured fleet script turns the panel on, just above the log.
+  const withFleet: Panel[] =
+    fleetScript && !base.includes('fleet') ? base.flatMap(p => (p === 'log' ? ['fleet' as const, p] : [p])) : base
+  if (fleetScript && !withFleet.includes('fleet')) withFleet.push('fleet')
   const layout = str('layout', 'auto')
   const max = typeof o.maxCards === 'number' ? Math.round(o.maxCards) : 3
   return {
     architect: safeRegExp(str('architectPattern', ''), 'advisor|architect'),
     architectLabel: str('architectLabel', 'ARCHITECT'),
     gateLabel: str('gateLabel', 'GATE'),
-    panels: panels.length > 0 ? [...new Set(panels)] : [...PANELS],
+    panels: fleetScript ? withFleet : base.filter(p => p !== 'fleet'),
+    fleetScript,
     motion: str('motion', 'while-active') !== 'off',
     moments: bool('moments', true),
     matchDescriptions: bool('matchDescriptions', false),
