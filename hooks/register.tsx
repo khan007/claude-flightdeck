@@ -585,7 +585,7 @@ export const register: Register = (on, options) => {
       agents: cards.length === 0,
       loops: lp.length === 0,
       receipt: !m.isRunning && !r,
-      fleet: fl.rows.length === 0,
+      fleet: !cfg.fleetScript, // shown once configured, even while loading or failing, so a problem is visible
       log: false,
     }
     const panels = cfg.panels.filter(p => !isEmpty[p])
@@ -976,6 +976,7 @@ export const register: Register = (on, options) => {
           <Text dimColor>{`now ${fmtUsd(fleetTotal)}`}</Text>
         </Box>
         {fl.todayUsd !== null ? <Text dimColor>{`today ${fmtUsd(fl.todayUsd)}`}</Text> : null}
+        {fl.rows.length === 0 && !fl.error ? <Text dimColor>loading…</Text> : null}
         {fl.rows.slice(0, 6).map(x => {
           const cost = ` · ${fmtUsd(x.costUsd)}${x.costIncomplete ? '+' : ''}`
           // inside the frame: 2 border + 2 padding + 2 for the dot, then the cost stays whole
@@ -993,7 +994,7 @@ export const register: Register = (on, options) => {
           )
         })}
         {fl.rows.length > 6 ? <Text dimColor>{`+${fl.rows.length - 6} more`}</Text> : null}
-        {fl.error ? <Text color={C.warn} wrap="truncate">{`refresh failed: ${fl.error}`}</Text> : null}
+        {fl.error ? <Text color={C.warn}>{`refresh failed: ${fl.error}`}</Text> : null}
       </Box>
     )
 
