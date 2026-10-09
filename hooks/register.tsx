@@ -83,11 +83,12 @@ const version = atom({ plugin: 'flightdeck', key: 'version' } as const, '')
 const FLEET_POLL_MS = 5000
 
 // Runs the user's fleet script (python3, read-only, JSON on stdout) and keeps the rows for the panel.
-const SESSION_ID = /^[0-9a-f-]{36}$/
+// The desktop app only accepts its own ids (local_<uuid>) on claude://code/continue.
+const HOST_ID = /^local_[A-Za-z0-9-]{1,64}$/
 
 // Opens a desktop-app session in the Claude desktop app through its claude:// deep link.
 async function openSession($: EngineInterface, id: string) {
-  if (!SESSION_ID.test(id)) return
+  if (!HOST_ID.test(id)) return
   try {
     await $.process.run(['open', `claude://code/continue?session=${id}&source=flightdeck`], { timeoutMs: 10000 })
   } catch (err) {
@@ -995,8 +996,8 @@ export const register: Register = (on, options) => {
           return (
             <Box>
               <Text color={x.status === 'busy' ? C.gate : C.dim}>{x.status === 'busy' ? '● ' : '○ '}</Text>
-              {x.entrypoint === 'claude-desktop' ? (
-                <Button key={`fleet-${x.id}`} plain label={shorten(x.name, room)} onPress={() => openSession($, x.id)} />
+              {x.entrypoint === 'claude-desktop' && x.hostId ? (
+                <Button key={`fleet-${x.id}`} plain label={shorten(x.name, room)} onPress={() => openSession($, x.hostId)} />
               ) : (
                 <Text bold={x.status === 'busy'}>{shorten(x.name, room)}</Text>
               )}

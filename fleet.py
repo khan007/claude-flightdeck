@@ -260,6 +260,7 @@ def as_json(show_all):
             "dir": short_dir(d.get("cwd", "")),
             "status": d.get("status", "?"),
             "entrypoint": d.get("entrypoint", ""),
+            "hostId": d.get("hostSessionId", ""),
             "ageMs": int(now - d.get("startedAt", now)),
             "idleMs": int(now - (d.get("statusUpdatedAt") or d.get("updatedAt") or d.get("startedAt", now))),
             "costUsd": round(cost, 4),
