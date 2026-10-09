@@ -100,7 +100,9 @@ export type Config = {
   architectLabel: string
   gateLabel: string
   panels: Panel[]
-  /** Path to fleet.py; empty keeps the fleet panel off and runs no process. */
+  /** Shows the FLEET panel, which runs the bundled fleet.py (or `fleetScript`) every few seconds. */
+  fleet: boolean
+  /** Overrides the bundled fleet.py when set. */
   fleetScript: string
   motion: boolean
   moments: boolean
@@ -128,19 +130,20 @@ export const parseConfig = (o: Readonly<Record<string, unknown>>): Config => {
     .split(',')
     .map(s => s.trim())
     .filter((p): p is Panel => KNOWN_PANELS.includes(p))
+  const fleet = bool('fleet', true)
   const fleetScript = str('fleetScript', '')
   const base = panels.length > 0 ? [...new Set(panels)] : [...PANELS]
-  // A configured fleet script turns the panel on, just above the log.
-  const withFleet: Panel[] =
-    fleetScript && !base.includes('fleet') ? base.flatMap(p => (p === 'log' ? ['fleet' as const, p] : [p])) : base
-  if (fleetScript && !withFleet.includes('fleet')) withFleet.push('fleet')
+  // The fleet panel sits just above the log unless the panels list places it.
+  const withFleet: Panel[] = base.includes('fleet') ? base : base.flatMap(p => (p === 'log' ? ['fleet' as const, p] : [p]))
+  if (!withFleet.includes('fleet')) withFleet.push('fleet')
   const layout = str('layout', 'auto')
   const max = typeof o.maxCards === 'number' ? Math.round(o.maxCards) : 3
   return {
     architect: safeRegExp(str('architectPattern', ''), 'advisor|architect'),
     architectLabel: str('architectLabel', 'ARCHITECT'),
     gateLabel: str('gateLabel', 'GATE'),
-    panels: fleetScript ? withFleet : base.filter(p => p !== 'fleet'),
+    panels: fleet ? withFleet : base.filter(p => p !== 'fleet'),
+    fleet,
     fleetScript,
     motion: str('motion', 'while-active') !== 'off',
     moments: bool('moments', true),

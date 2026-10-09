@@ -264,9 +264,10 @@ export const register: Register = (on, options) => {
       }))
     }
     if (cfg.openOnStart) void openPane($).catch(() => undefined)
-    if (cfg.fleetScript) {
-      void refreshFleet($, cfg.fleetScript)
-      $.clock.every(FLEET_POLL_MS, () => refreshFleet($, cfg.fleetScript))
+    if (cfg.fleet) {
+      const script = cfg.fleetScript || `${$.plugin.root}/fleet.py`
+      void refreshFleet($, script)
+      $.clock.every(FLEET_POLL_MS, () => refreshFleet($, script))
     }
     await refreshStatus($, cfg)
     return next(e)
@@ -585,7 +586,7 @@ export const register: Register = (on, options) => {
       agents: cards.length === 0,
       loops: lp.length === 0,
       receipt: !m.isRunning && !r,
-      fleet: !cfg.fleetScript, // shown once configured, even while loading or failing, so a problem is visible
+      fleet: !cfg.fleet, // shown while enabled, even while loading or failing, so a problem is visible
       log: false,
     }
     const panels = cfg.panels.filter(p => !isEmpty[p])
