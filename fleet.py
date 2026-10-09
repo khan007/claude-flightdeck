@@ -241,7 +241,7 @@ def render(show_all, color):
         total += cost
         any_unknown = any_unknown or unknown
         parts = [f"{run_cost:,.2f}", f"{today_cost:,.2f}", f"{cost:,.2f}"]
-        cost_s = (parts[2] if len(set(parts)) == 1 else " / ".join(parts)) + ("+" if unknown else "")
+        cost_s = " / ".join(dict.fromkeys(parts)) + ("+" if unknown else "")  # equal values shown once
         last = ago(d.get("statusUpdatedAt") or d.get("updatedAt") or d.get("startedAt", now), now)
         mshort = (model or "?").replace("claude-", "")
         out.append(

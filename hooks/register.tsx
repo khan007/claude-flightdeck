@@ -991,8 +991,8 @@ export const register: Register = (on, options) => {
         {fl.rows.length === 0 && !fl.error ? <Text dimColor>loading…</Text> : null}
         {fl.rows.slice(0, 6).map(x => {
           const parts = [x.runCostUsd, x.todayCostUsd, x.costUsd].map(n => n.toFixed(2))
-          // run / today / all, collapsed to one number when they are all the same
-          const cost = ` · ${new Set(parts).size === 1 ? parts[2] : parts.join(' / ')}${x.costIncomplete ? '+' : ''}`
+          // run / today / all, each distinct number shown once
+          const cost = ` · ${[...new Set(parts)].join(' / ')}${x.costIncomplete ? '+' : ''}`
           // inside the frame: 2 border + 2 padding + 2 for the dot, then the cost stays whole
           const room = Math.max(8, w - 6 - cost.length)
           return (
