@@ -33,11 +33,11 @@ PRICES = {
     "claude-sonnet-4-6": (3.0, 15.0, 0.30, 3.75, 6.0),
 }
 
-PRICES_KEY = json.dumps(PRICES, sort_keys=True)
+PRICES_KEY = json.dumps(PRICES, sort_keys=True) + "|fmt2"  # bump the suffix when the cache shape changes
 CACHE_FILE = os.path.join(HOME, ".cache", "fleet", "costs.json")
 SCAN_BUDGET_S = 10.0  # parse at most this long per run; the rest is picked up next run
 
-# transcript path -> {size, mtime, days: {local YYYY-MM-DD: usd}, unknown, model}
+# transcript path -> {size, mtime, msgs: [[epoch_ms, usd], ...], unknown, model}
 _cache = {}
 _cache_dirty = False
 _deadline = None  # set per run; past it, unparsed files are skipped (totals are partial)
@@ -68,12 +68,11 @@ def save_cache():
         pass
 
 
-def local_day(ts):
+def epoch_ms(ts):
     try:
-        dt = datetime.datetime.fromisoformat(ts.replace("Z", "+00:00"))
-        return dt.astimezone().strftime("%Y-%m-%d")
+        return int(datetime.datetime.fromisoformat(ts.replace("Z", "+00:00")).timestamp() * 1000)
     except (ValueError, AttributeError):
-        return "unknown"
+        return 0
 
 
 def alive(pid):
@@ -93,15 +92,15 @@ def transcript_files(session_id):
 
 
 def file_cost(path):
-    """Per-file cost by local day, cached on disk by (size, mtime). Returns (days, unknown, model)."""
+    """Per-message costs of one transcript, cached on disk by (size, mtime). Returns (msgs, unknown, model)."""
     global _cache_dirty, _skipped
     st = os.stat(path)
     hit = _cache.get(path)
     if hit and hit["size"] == st.st_size and hit["mtime"] == st.st_mtime:
-        return hit["days"], hit["unknown"], hit["model"]
+        return hit["msgs"], hit["unknown"], hit["model"]
     if _deadline is not None and time.time() > _deadline:
         _skipped = True
-        return (hit["days"], hit["unknown"], hit["model"]) if hit else ({}, False, None)
+        return (hit["msgs"], hit["unknown"], hit["model"]) if hit else ([], False, None)
     by_id = {}  # a message streamed over several lines repeats its id: keep the last
     with open(path, errors="replace") as f:
         for line in f:
@@ -112,7 +111,7 @@ def file_cost(path):
             m = d.get("message")
             if isinstance(m, dict) and isinstance(m.get("usage"), dict):
                 by_id[m.get("id") or d.get("uuid") or len(by_id)] = (m.get("model"), m["usage"], d.get("timestamp"))
-    days, unknown, last = {}, False, None
+    msgs, unknown, last = [], False, None
     for model, u, ts in by_id.values():
         if model == "<synthetic>":
             continue
@@ -133,48 +132,55 @@ def file_cost(path):
             + w5m * p[3]
             + w1h * p[4]
         ) / 1e6
-        day = local_day(ts)
-        days[day] = days.get(day, 0.0) + c
-    _cache[path] = {"size": st.st_size, "mtime": st.st_mtime, "days": days, "unknown": unknown, "model": last}
+        msgs.append([epoch_ms(ts), round(c, 6)])
+    _cache[path] = {"size": st.st_size, "mtime": st.st_mtime, "msgs": msgs, "unknown": unknown, "model": last}
     _cache_dirty = True
-    return days, unknown, last
+    return msgs, unknown, last
 
 
 def all_files():
     return glob.glob(os.path.join(PROJECTS, "*", "**", "*.jsonl"), recursive=True)
 
 
+def midnight_ms():
+    now = datetime.datetime.now().astimezone()
+    return now.replace(hour=0, minute=0, second=0, microsecond=0).timestamp() * 1000
+
+
 def today_total():
     """USD spent today across every transcript, subagents included."""
-    now = datetime.datetime.now().astimezone()
-    midnight = now.replace(hour=0, minute=0, second=0, microsecond=0).timestamp()
-    today = now.strftime("%Y-%m-%d")
+    start = midnight_ms()
     total = 0.0
     for p in all_files():
         try:
-            if os.stat(p).st_mtime < midnight:
+            if os.stat(p).st_mtime * 1000 < start:
                 continue  # untouched since yesterday: nothing spent today
-            days, _, _ = file_cost(p)
+            msgs, _, _ = file_cost(p)
         except OSError:
             continue
-        total += days.get(today, 0.0)
+        total += sum(c for ts, c in msgs if ts >= start)
     return total
 
 
-def session_cost(session_id):
-    """(total USD, USD spent today, any unpriced model, last model) for one session."""
-    today = datetime.date.today().strftime("%Y-%m-%d")
-    total, today_cost, unknown, model = 0.0, 0.0, False, None
+def session_cost(session_id, started_ms):
+    """One session's USD: (this run since its process started, today, all time, any unpriced model, last model)."""
+    start = midnight_ms()
+    run = today = total = 0.0
+    unknown, model = False, None
     for p in transcript_files(session_id):
         try:
-            days, u, m = file_cost(p)
+            msgs, u, m = file_cost(p)
         except OSError:
             continue
-        total += sum(days.values())
-        today_cost += days.get(today, 0.0)
+        for ts, c in msgs:
+            total += c
+            if ts >= start:
+                today += c
+            if ts >= started_ms:
+                run += c
         unknown = unknown or u
         model = m or model
-    return total, today_cost, unknown, model
+    return run, today, total, unknown, model
 
 
 def short_dir(cwd):
@@ -224,23 +230,23 @@ def render(show_all, color):
     rows = load(show_all)
     paint = (lambda c, s: f"\033[{c}m{s}\033[0m") if color else (lambda c, s: s)
     out = [f"SESSIONS ({len(rows)} running)    refreshed {time.strftime('%H:%M:%S')}", ""]
-    hdr = f"  {'STATUS':<9} {'NAME':<40} {'DIR':<26} {'AGE':<7} {'LAST ACTIVITY':<14} {'TODAY / TOTAL':>18}  MODEL"
+    hdr = f"  {'STATUS':<9} {'NAME':<40} {'DIR':<26} {'AGE':<7} {'LAST ACTIVITY':<14} {'RUN / TODAY / ALL':>24}  MODEL"
     out.append(paint("2", hdr))
     total, any_unknown = 0.0, False
     for d in rows:
         status = d.get("status", "?")
         dot = paint("32", "● busy   ") if status == "busy" else paint("2", f"○ {status:<7}")
         name = (d.get("name") or short_dir(d.get("cwd", "")))[:40]
-        cost, today_cost, unknown, model = session_cost(d.get("sessionId", ""))
+        run_cost, today_cost, cost, unknown, model = session_cost(d.get("sessionId", ""), d.get("startedAt", 0))
         total += cost
         any_unknown = any_unknown or unknown
-        cost_s = f"${today_cost:,.2f} / ${cost:,.2f}" + ("+" if unknown else "")
+        cost_s = f"{run_cost:,.2f} / {today_cost:,.2f} / {cost:,.2f}" + ("+" if unknown else "")
         last = ago(d.get("statusUpdatedAt") or d.get("updatedAt") or d.get("startedAt", now), now)
         mshort = (model or "?").replace("claude-", "")
         out.append(
             f"  {dot} {name:<40} "
             f"{short_dir(d.get('cwd', ''))[:26]:<26} {age(d.get('startedAt', now), now):<7} "
-            f"{last:<14} {cost_s:>18}  {mshort}"
+            f"{last:<14} {cost_s:>24}  {mshort}"
         )
     out.append("")
     out.append(
@@ -256,7 +262,7 @@ def as_json(show_all):
     now = time.time() * 1000
     out = []
     for d in load(show_all):
-        cost, today_cost, unknown, model = session_cost(d.get("sessionId", ""))
+        run_cost, today_cost, cost, unknown, model = session_cost(d.get("sessionId", ""), d.get("startedAt", 0))
         out.append({
             "id": d.get("sessionId"),
             "name": d.get("name") or short_dir(d.get("cwd", "")),
@@ -267,6 +273,7 @@ def as_json(show_all):
             "ageMs": int(now - d.get("startedAt", now)),
             "idleMs": int(now - (d.get("statusUpdatedAt") or d.get("updatedAt") or d.get("startedAt", now))),
             "costUsd": round(cost, 4),
+            "runCostUsd": round(run_cost, 4),
             "todayCostUsd": round(today_cost, 4),
             "costIncomplete": unknown,
             "model": (model or "?").replace("claude-", ""),

@@ -100,6 +100,7 @@ export type FleetRow = {
   ageMs: number
   idleMs: number
   costUsd: number
+  runCostUsd: number
   todayCostUsd: number
   costIncomplete: boolean
   model: string
