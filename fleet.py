@@ -240,7 +240,8 @@ def render(show_all, color):
         run_cost, today_cost, cost, unknown, model = session_cost(d.get("sessionId", ""), d.get("startedAt", 0))
         total += cost
         any_unknown = any_unknown or unknown
-        cost_s = f"{run_cost:,.2f} / {today_cost:,.2f} / {cost:,.2f}" + ("+" if unknown else "")
+        parts = [f"{run_cost:,.2f}", f"{today_cost:,.2f}", f"{cost:,.2f}"]
+        cost_s = (parts[2] if len(set(parts)) == 1 else " / ".join(parts)) + ("+" if unknown else "")
         last = ago(d.get("statusUpdatedAt") or d.get("updatedAt") or d.get("startedAt", now), now)
         mshort = (model or "?").replace("claude-", "")
         out.append(
