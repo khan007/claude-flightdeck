@@ -694,14 +694,14 @@ export const register: Register = (on, options) => {
             </Text>
             <Text dimColor>{`${s.total} checks`}</Text>
           </Box>
-          <Box>
+          <Text wrap="truncate">
             {strip.length === 0 ? <Text color={C.faint}>no checks yet</Text> : null}
             {strip.map(c => (
               <Text color={verdictColor(c)} dimColor={c.inSubagent}>
                 {c.verdict === 'deny' ? '✗' : '■'}
               </Text>
             ))}
-          </Box>
+          </Text>
           <Text wrap="truncate">
             <Text color={C.gate}>■</Text>
             <Text dimColor>{` ${s.rule} allowed  `}</Text>
