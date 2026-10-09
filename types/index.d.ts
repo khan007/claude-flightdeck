@@ -102,7 +102,7 @@ export type FleetRow = {
   costIncomplete: boolean
   model: string
 }
-export type Fleet = { rows: FleetRow[]; todayUsd: number | null; allUsd: number | null; error: string | null }
+export type Fleet = { rows: FleetRow[]; todayUsd: number | null; error: string | null }
 
 declare module 'claude-code' {
   interface PluginState {

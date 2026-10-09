@@ -76,7 +76,7 @@ const turn = atom({ plugin: 'flightdeck', key: 'turn' } as const, DEFAULT_TURN)
 const receipt = atom({ plugin: 'flightdeck', key: 'receipt' } as const, null)
 const view = atom({ plugin: 'flightdeck', key: 'view' } as const, DEFAULT_VIEW)
 const roster = atom({ plugin: 'flightdeck', key: 'roster' } as const, DEFAULT_ROSTER)
-const fleet = atom({ plugin: 'flightdeck', key: 'fleet' } as const, { rows: [], todayUsd: null, allUsd: null, error: null } as Fleet)
+const fleet = atom({ plugin: 'flightdeck', key: 'fleet' } as const, { rows: [], todayUsd: null, error: null } as Fleet)
 
 const FLEET_POLL_MS = 5000
 
@@ -97,8 +97,8 @@ async function refreshFleet($: EngineInterface, script: string) {
   try {
     const run = await $.process.run(['python3', '-I', script, '--json'], { timeoutMs: 20000 })
     if (run.exitCode !== 0) throw new Error(run.stderr.trim().split('\n').pop() || `exit ${run.exitCode}`)
-    const out = JSON.parse(run.stdout) as { sessions: FleetRow[]; todayUsd: number; allUsd: number }
-    await update($, fleet, () => ({ rows: out.sessions, todayUsd: out.todayUsd, allUsd: out.allUsd, error: null }))
+    const out = JSON.parse(run.stdout) as { sessions: FleetRow[]; todayUsd: number }
+    await update($, fleet, () => ({ rows: out.sessions, todayUsd: out.todayUsd, error: null }))
   } catch (err) {
     $.ui.log(`flightdeck: fleet refresh failed: ${String(err)}`, { to: 'debug' })
     await update($, fleet, x => ({ ...x, error: String(err) }))
@@ -975,9 +975,7 @@ export const register: Register = (on, options) => {
           </Text>
           <Text dimColor>{`now ${fmtUsd(fleetTotal)}`}</Text>
         </Box>
-        {fl.todayUsd !== null && fl.allUsd !== null ? (
-          <Text dimColor wrap="truncate">{`today ${fmtUsd(fl.todayUsd)} · all time ${fmtUsd(fl.allUsd)}`}</Text>
-        ) : null}
+        {fl.todayUsd !== null ? <Text dimColor>{`today ${fmtUsd(fl.todayUsd)}`}</Text> : null}
         {fl.rows.slice(0, 6).map(x => {
           const cost = ` · ${fmtUsd(x.costUsd)}${x.costIncomplete ? '+' : ''}`
           // inside the frame: 2 border + 2 padding + 2 for the dot, then the cost stays whole
