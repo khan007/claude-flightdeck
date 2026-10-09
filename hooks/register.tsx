@@ -1015,6 +1015,8 @@ export const register: Register = (on, options) => {
                     ? fleetPanel(w)
                     : logPanel(w)
 
+    // The desktop draws boxes with no gap where a terminal row leaves one: give the unlinked boxes a row of air.
+    const gap = e.surface !== 'terminal'
     // Panels with the flow between them; the agents panel draws its own rails.
     const column = (ps: Panel[], w: number) => (
       <Box flexDirection="column" width={w}>
@@ -1025,7 +1027,7 @@ export const register: Register = (on, options) => {
               ? null
               : rail(`link-${p}`, p === 'architect' ? advising : m.isRunning, p === 'architect' ? C.arch : C.main, w)
           return (
-            <Box flexDirection="column">
+            <Box flexDirection="column" marginTop={gap && i > 0 && (p === 'fleet' || p === 'log') ? 1 : 0}>
               {link}
               {draw(p, w)}
               {p === 'agents' ? expandedPanel(w) : null}
@@ -1140,7 +1142,7 @@ export const register: Register = (on, options) => {
           {column(panels.filter(p => p === 'main' || p === 'architect' || p === 'gate'), colW)}
           {column(panels.filter(p => p === 'agents' || p === 'loops' || p === 'receipt' || p === 'fleet'), colW)}
         </Box>
-        {panels.includes('log') ? logPanel(W) : null}
+        {panels.includes('log') ? <Box marginTop={gap ? 1 : 0}>{logPanel(W)}</Box> : null}
       </Box>
     ) : (
       column(panels, W)
