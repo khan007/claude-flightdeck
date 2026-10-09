@@ -978,6 +978,7 @@ export const register: Register = (on, options) => {
     )
 
     // ---- fleet: running sessions with their estimated cost (from the user's fleet script)
+    const kindColors = [C.agent, C.main, C.gate] // run, today, all
     const fleetTotal = fl.rows.reduce((sum, x) => sum + x.costUsd, 0)
     const fleetPanel = (w: number) => (
       <Box flexDirection="column" borderStyle="round" borderColor={C.faint} paddingX={1} width={w}>
@@ -987,12 +988,27 @@ export const register: Register = (on, options) => {
           </Text>
           <Text dimColor>{`now ${fmtUsd(fleetTotal)}`}</Text>
         </Box>
-        {fl.todayUsd !== null ? <Text dimColor wrap="truncate">{`today ${fmtUsd(fl.todayUsd)} · per session: run / today / all`}</Text> : null}
+        {fl.todayUsd !== null ? (
+          <Text wrap="truncate">
+            <Text dimColor>{`today ${fmtUsd(fl.todayUsd)} · per session: `}</Text>
+            <Text color={kindColors[0]}>run</Text>
+            <Text dimColor> / </Text>
+            <Text color={kindColors[1]}>today</Text>
+            <Text dimColor> / </Text>
+            <Text color={kindColors[2]}>all</Text>
+          </Text>
+        ) : null}
         {fl.rows.length === 0 && !fl.error ? <Text dimColor>loading…</Text> : null}
         {fl.rows.slice(0, 6).map(x => {
-          const parts = [x.runCostUsd, x.todayCostUsd, x.costUsd].map(n => n.toFixed(2))
-          // run / today / all, each distinct number shown once
-          const cost = ` · ${[...new Set(parts)].join(' / ')}${x.costIncomplete ? '+' : ''}`
+          // run / today / all in their own colours; equal neighbours merge into one number in the wider kind's colour
+          const groups: { v: string; c: string }[] = []
+          ;[x.runCostUsd, x.todayCostUsd, x.costUsd].forEach((n, i) => {
+            const v = n.toFixed(2)
+            const last = groups[groups.length - 1]
+            if (last && last.v === v) last.c = kindColors[i]
+            else groups.push({ v, c: kindColors[i] })
+          })
+          const cost = ` · ${groups.map(g => g.v).join(' / ')}${x.costIncomplete ? '+' : ''}`
           // inside the frame: 2 border + 2 padding + 2 for the dot, then the cost stays whole
           const room = Math.max(8, w - 6 - cost.length)
           return (
@@ -1003,7 +1019,14 @@ export const register: Register = (on, options) => {
               ) : (
                 <Text bold={x.status === 'busy'}>{shorten(x.name, room)}</Text>
               )}
-              <Text dimColor>{cost}</Text>
+              <Text dimColor> · </Text>
+              {groups.map((g, i) => (
+                <Text>
+                  {i > 0 ? <Text dimColor> / </Text> : null}
+                  <Text color={g.c}>{g.v}</Text>
+                </Text>
+              ))}
+              {x.costIncomplete ? <Text dimColor>+</Text> : null}
             </Box>
           )
         })}
