@@ -1,6 +1,6 @@
 {
   "name": "flightdeck",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "description": "Flightdeck: a live agent dashboard for Claude Code. Main model vitals, an on-call architect, every permission check, subagent cards and swimlanes, a turn receipt and a session log, all from real session events",
   "author": {
     "name": "Stephen Casella",
@@ -103,9 +103,9 @@
     },
     "fleetScript": {
       "title": "Fleet script",
-      "description": "Absolute path to fleet.py (sessions list with cost). Setting it adds a FLEET panel and runs that script with python3 every 5 seconds while the pane is open. Leave empty to keep it off.",
+      "description": "Absolute path to fleet.py (sessions list with cost). A set path adds a FLEET panel and runs that script with python3 every 5 seconds while the pane is open. Clear it to turn the panel off. Defaults to this machine's checkout because the desktop app does not apply saved plugin options to folder-sourced plugins.",
       "type": "string",
-      "default": ""
+      "default": "/Users/k.vongsavanthong/git/fleet/fleet.py"
     },
     "statusLine": {
       "title": "Status line",
