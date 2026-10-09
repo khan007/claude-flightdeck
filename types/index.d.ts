@@ -95,6 +95,7 @@ export type FleetRow = {
   name: string
   dir: string
   status: string
+  entrypoint: string
   ageMs: number
   idleMs: number
   costUsd: number

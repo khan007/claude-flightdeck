@@ -81,6 +81,18 @@ const fleet = atom({ plugin: 'flightdeck', key: 'fleet' } as const, { rows: [], 
 const FLEET_POLL_MS = 5000
 
 // Runs the user's fleet script (python3, read-only, JSON on stdout) and keeps the rows for the panel.
+const SESSION_ID = /^[0-9a-f-]{36}$/
+
+// Opens a desktop-app session in the Claude desktop app through its claude:// deep link.
+async function openSession($: EngineInterface, id: string) {
+  if (!SESSION_ID.test(id)) return
+  try {
+    await $.process.run(['open', `claude://code/continue?session=${id}&source=flightdeck`], { timeoutMs: 10000 })
+  } catch (err) {
+    $.ui.log(`flightdeck: open session ${id} failed: ${String(err)}`, { to: 'debug' })
+  }
+}
+
 async function refreshFleet($: EngineInterface, script: string) {
   try {
     const run = await $.process.run(['python3', '-I', script, '--json'], { timeoutMs: 20000 })
@@ -971,11 +983,15 @@ export const register: Register = (on, options) => {
           // inside the frame: 2 border + 2 padding + 2 for the dot, then the cost stays whole
           const room = Math.max(8, w - 6 - cost.length)
           return (
-            <Text wrap="truncate">
+            <Box>
               <Text color={x.status === 'busy' ? C.gate : C.dim}>{x.status === 'busy' ? '● ' : '○ '}</Text>
-              <Text bold={x.status === 'busy'}>{shorten(x.name, room)}</Text>
+              {x.entrypoint === 'claude-desktop' ? (
+                <Button key={`fleet-${x.id}`} plain label={shorten(x.name, room)} onPress={() => openSession($, x.id)} />
+              ) : (
+                <Text bold={x.status === 'busy'}>{shorten(x.name, room)}</Text>
+              )}
               <Text dimColor>{cost}</Text>
-            </Text>
+            </Box>
           )
         })}
         {fl.rows.length > 6 ? <Text dimColor>{`+${fl.rows.length - 6} more`}</Text> : null}
