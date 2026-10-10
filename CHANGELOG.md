@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.40
+
+- Desktop: fleet state chips are softer: `IDLE` has a faint tint and normal weight; `BUSY` and `WAIT` keep a stronger tint and bold.
+
 ## 0.3.39
 
 - Sessions that are waiting for you stand out: a `N waiting` pill in the header, `· N WAITING` in the fleet title, an amber `WAIT` chip, and the reason (`input needed`) beside the name. `fleet.py` now reports `waitingFor`.

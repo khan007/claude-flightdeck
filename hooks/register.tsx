@@ -1273,7 +1273,13 @@ export const register: Register = (on, options) => {
                 ) : null}
                 <Box width={stateW} justifyContent="flex-end">
                   {isDesk ? (
-                    <Text color={stateColor(x.status)} bold backgroundColor={tintOf(stateColor(x.status), 0.18)}>{` ${st} `}</Text>
+                    <Text
+                      color={stateColor(x.status)}
+                      bold={x.status !== 'idle'}
+                      backgroundColor={tintOf(stateColor(x.status), x.status === 'idle' ? 0.07 : 0.16)}
+                    >
+                      {` ${st} `}
+                    </Text>
                   ) : (
                     <Text color={stateColor(x.status)}>{`[${st}]`}</Text>
                   )}

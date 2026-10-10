@@ -1,6 +1,6 @@
 # TODO — Flightdeck restyle (fork khan007/claude-flightdeck, branch `strip-fix`)
 
-Last updated: 2026-10-10 (end of day). Plugin version **0.3.39**, all pushed (`3c532ce`). Working tree clean when this was written.
+Last updated: 2026-10-10 (end of day). Plugin version **0.3.40** (0.3.39 and earlier pushed). Working tree clean when this was written.
 
 ## Setup (done)
 - Cloned `khan007/claude-flightdeck` (branch `strip-fix`) and `khan007/fleet` into `~/git`; both validated and installed from those local folders (user scope: `flightdeck@claude-flightdeck`, `fleet@fleet`).
@@ -23,7 +23,7 @@ Improve on the initial design (v0.3.13 look) so that **desktop** looks like the 
 - Context bar width estimate (`(w - 4) * 8.3` px) — could be slightly short or long.
 
 ## Open ideas / to do tomorrow
-- Fleet `IDLE` chip tint is heavy (solid green block); soften toward the soft pill in the mockup.
+- (done in 0.3.40) Fleet `IDLE` chip softened; check how it looks on screen.
 - Tab placement: `TAB_DROP = 7` px, `TAB_BG = '#1b1a19'` (assumes a dark pane; a light theme would show dark tabs). Make it theme-aware if needed.
 - Desktop: restyle the "other loops" line and the expanded-agent detail box (still old plain style).
 - Terminal still differs from the mockup: title not on the border, pills are bracketed text, no bordered model chip in the header, bar colour orange vs green+hatched. Decide if any of that is worth doing (colour is easy).
