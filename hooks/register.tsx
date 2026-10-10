@@ -641,7 +641,7 @@ export const register: Register = (on, options) => {
 
     // Desktop: a panel's title is an SVG chip (rounded, marked, in the panel's colour); the rest stays live text.
     // The tab's chip is drawn this many px below the top of its box, so it overlaps the card's border a little.
-    const TAB_DROP = 5
+    const TAB_DROP = 7
     // Solid fill under the tab (assumes a dark pane), so the card's border line does not show through it.
     const TAB_BG = '#1b1a19'
     // Desktop: the title as a tab sitting on the card's top edge, one row up (so every card keeps a free row above it).
