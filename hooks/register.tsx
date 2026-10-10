@@ -1163,7 +1163,7 @@ export const register: Register = (on, options) => {
           {isDesk ? (
             <Box justifyContent="space-between">
               <Box>
-                {chip(`${num('log')} // LIVE BUFFER${viewed ? ' · THIS AGENT' : ''}`, C.main)}
+                {chip(`${num('log')} // LIVE BUFFER${viewed ? ' · THIS AGENT' : ''}`, 'subtle')}
                 {live ? <Text color={C.main} bold>{' [TURN '}</Text> : null}
                 {live ? clock('turn-log-clock', t.startedAt, null, C.main) : null}
                 {live ? <Text color={C.main} bold>{']'}</Text> : null}
@@ -1175,7 +1175,7 @@ export const register: Register = (on, options) => {
             ? null
             : onBorder(
                 <Box>
-                  <Text color={C.main} bold wrap="truncate">{` ${mark}${num('log')} // LIVE BUFFER${viewed ? ' · THIS AGENT' : ''}`}</Text>
+                  <Text color={C.dim} bold wrap="truncate">{` ${mark}${num('log')} // LIVE BUFFER${viewed ? ' · THIS AGENT' : ''}`}</Text>
                   {live ? <Text color={C.main} bold>{' [TURN '}</Text> : null}
                   {live ? clock('turn-log-clock', t.startedAt, null, C.main) : null}
                   {live ? <Text color={C.main} bold>{'] '}</Text> : <Text> </Text>}
@@ -1311,7 +1311,7 @@ export const register: Register = (on, options) => {
       const c = barCapSvg(color, isTop)
       return <Svg source={c.svg} alt="" width={c.width} height={c.height} />
     }
-    const barColor: Partial<Record<Panel, string>> = { main: C.main, gate: C.gate, fleet: C.agent, log: C.main }
+    const barColor: Partial<Record<Panel, string>> = { main: C.main, gate: C.gate, fleet: C.agent, log: 'subtle' }
     const column = (ps: Panel[], w: number) => (
       <Box flexDirection="column" width={w}>
         {ps.map((p, i) => {

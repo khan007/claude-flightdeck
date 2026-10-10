@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.25
+
+- Desktop: the accent bar's ends curve toward the card like its rounded corner. The live buffer is grey (chip, bar and, in the terminal, its title).
+
 ## 0.3.24
 
 - Desktop: the accent bar has rounded ends (small SVG caps above and below the stretching middle).

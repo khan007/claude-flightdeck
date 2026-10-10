@@ -516,11 +516,12 @@ test('logo badge and gate strip draw as SVG', () => {
   expect(checkStripSvg(Array.from({ length: 50 }, () => ({ color: 'success', dim: false })), 60).count).toBeLessThan(10)
 })
 
-test('the accent bar ends are round: an arc at the top cap, one at the bottom cap', () => {
+test('the accent bar ends curve like the card corner: an arc at the top, its mirror at the bottom', () => {
   const top = barCapSvg('claude', true)
   const bottom = barCapSvg('claude', false)
-  expect(top.svg).toContain('#d97757')
-  expect(top.svg).toContain(' A1 1 ')
-  expect(bottom.svg).toContain(' A1 1 ')
+  expect(top.svg).toContain('stroke="#d97757"')
+  expect(top.svg).toContain(' A8 8 0 0 1 ')
+  expect(bottom.svg).toContain(' A8 8 0 0 0 ')
   expect(top.svg).not.toBe(bottom.svg)
+  expect(top.height).toBe(10)
 })

@@ -291,12 +291,19 @@ export const checkStripSvg = (cells: { color: string; dim: boolean }[], width: n
   return { svg: `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${height}" viewBox="0 0 ${w} ${height}">${rects}</svg>`, width: w, height, count: shown.length }
 }
 
-/** One rounded end of the desktop accent bar: a `w` by `h` px SVG, round at the top (or the bottom when `isTop` is false). */
-export const barCapSvg = (color: string, isTop: boolean, w = 2, h = 4) => {
+/**
+ * One end of the desktop accent bar: a quarter-circle that curves from the bar toward the card, as the card's own
+ * rounded corner does. The bar's line runs down the left edge of this `size` px SVG; `isTop` curves it over the top.
+ */
+export const barCapSvg = (color: string, isTop: boolean, size = 10) => {
   const hex = hexOf(color)
-  const r = w / 2
-  const d = isTop ? `M0 ${h} V${r} A${r} ${r} 0 0 1 ${w} ${r} V${h} Z` : `M0 0 V${h - r} A${r} ${r} 0 0 0 ${w} ${h - r} V0 Z`
-  return { svg: `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"><path d="${d}" fill="${hex}"/></svg>`, width: w, height: h }
+  const r = size - 2
+  const d = isTop ? `M1 ${size - 1} A${r} ${r} 0 0 1 ${size - 1} 1` : `M1 1 A${r} ${r} 0 0 0 ${size - 1} ${size - 1}`
+  return {
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}"><path d="${d}" fill="none" stroke="${hex}" stroke-width="2" stroke-linecap="round"/></svg>`,
+    width: size,
+    height: size,
+  }
 }
 
 /** A segmented bar for the desktop: rounded cells, `pct` of them lit in `color`, the rest faint. */
