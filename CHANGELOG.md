@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.39
+
+- Sessions that are waiting for you stand out: a `N waiting` pill in the header, `· N WAITING` in the fleet title, an amber `WAIT` chip, and the reason (`input needed`) beside the name. `fleet.py` now reports `waitingFor`.
+
 ## 0.3.38
 
 - Terminal: the gate's check strip and `N OK` really share a row; the fleet's cost column is sized to its numbers, so it no longer wraps; the fleet's title and border use the fleet colour.

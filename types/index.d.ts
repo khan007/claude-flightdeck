@@ -95,6 +95,8 @@ export type FleetRow = {
   name: string
   dir: string
   status: string
+  /** Why a `waiting` session is waiting (e.g. `input needed`); empty otherwise and from older fleet scripts. */
+  waitingFor?: string
   entrypoint: string
   hostId: string
   ageMs: number

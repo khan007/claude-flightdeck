@@ -33,6 +33,8 @@ import {
   promptLine,
   quotaName,
   stateOf,
+  waitHint,
+  waitingCount,
   handbackOf,
   adviceLine,
   receiptOf,
@@ -542,4 +544,13 @@ test('a tab on a dark pane is solid: the tint is blended over the pane colour', 
   expect(solid.svg).toContain('fill-opacity="1"')
   expect(solid.svg).toContain('fill="#240000"')
   expect(chipSvg('FLEET', '#ff0000', 18).svg).toContain('fill-opacity="0.14"')
+})
+
+test('waiting sessions are counted and explain themselves', () => {
+  const rows = [{ status: 'busy' }, { status: 'waiting', waitingFor: 'input needed' }, { status: 'waiting' }, { status: 'idle' }]
+  expect(waitingCount(rows)).toBe(2)
+  expect(waitingCount([])).toBe(0)
+  expect(waitHint(rows[1])).toBe('input needed')
+  expect(waitHint(rows[2])).toBe('waiting')
+  expect(waitHint(rows[0])).toBe('')
 })

@@ -351,6 +351,12 @@ export const blocks = (pct: number, width: number) => {
 /** A fleet row's status as a four-letter chip: busy, waiting or idle. */
 export const stateOf = (status: string) => (status === 'busy' ? 'BUSY' : status === 'waiting' ? 'WAIT' : status === 'idle' ? 'IDLE' : status.slice(0, 4).toUpperCase() || '?')
 
+/** How many fleet sessions are stopped and asking for you. */
+export const waitingCount = (rows: { status: string }[]) => rows.filter(r => r.status === 'waiting').length
+
+/** The short reason shown beside a waiting session's name; empty for any other status. */
+export const waitHint = (row: { status: string; waitingFor?: string }) => (row.status === 'waiting' ? row.waitingFor || 'waiting' : '')
+
 /** A rate-limit window as the pane names it: `5h Quota`, `7d Aggregate`, anything else as limitLabel gives it. */
 export const quotaName = (kind: string) => {
   const l = limitLabel(kind)

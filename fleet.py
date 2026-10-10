@@ -269,6 +269,7 @@ def as_json(show_all):
             "name": d.get("name") or short_dir(d.get("cwd", "")),
             "dir": short_dir(d.get("cwd", "")),
             "status": d.get("status", "?"),
+            "waitingFor": d.get("waitingFor") or "",
             "entrypoint": d.get("entrypoint", ""),
             "hostId": d.get("hostSessionId", ""),
             "ageMs": int(now - d.get("startedAt", now)),

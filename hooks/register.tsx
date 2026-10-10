@@ -62,6 +62,8 @@ import {
   shorten,
   startConsult,
   stateOf,
+  waitHint,
+  waitingCount,
   stepLoop,
 } from './core'
 import type { Config, Panel } from './core'
@@ -1192,6 +1194,7 @@ export const register: Register = (on, options) => {
 
     // ---- fleet: running sessions with their estimated cost (from the user's fleet script)
     const kindColors = [C.agent, C.main, C.gate] // run, today, all
+    const waitingN = waitingCount(fl.rows)
     const fleetTotal = fl.rows.reduce((sum, x) => sum + x.costUsd, 0)
     const fleetPanel = (w: number) => {
       const showIdle = w >= 56
@@ -1202,13 +1205,13 @@ export const register: Register = (on, options) => {
       const stateW = 7
       // inside the frame: 2 border + 2 padding, then the dot, the costs, the idle time and the state chip
       const room = Math.max(6, w - 4 - 2 - costW - idleW - stateW)
-      const stateColor = (st: string) => (st === 'busy' ? C.amber : st === 'waiting' ? C.cleared : C.gate)
+      const stateColor = (st: string) => (st === 'busy' || st === 'waiting' ? C.amber : C.gate)
       return (
         <Box flexDirection="column" borderStyle="round" borderColor={isDesk ? dimEdge(C.agent) : C.agent} backgroundColor={isDesk ? tintOf(C.agent) : undefined} paddingX={1} width={w}>
           {isDesk ? accent(C.agent) : null}
-          {isDesk ? tab(`FLEET [${fl.rows.length} ACTIVE]`, C.agent) : null}
+          {isDesk ? tab(`FLEET [${fl.rows.length} ACTIVE${waitingN > 0 ? ` · ${waitingN} WAITING` : ''}]`, waitingN > 0 ? C.amber : C.agent) : null}
           {isDesk ? null : (
-            <Text color={C.agent} bold wrap="truncate">{`${mark}FLEET [${fl.rows.length} ACTIVE]`}</Text>
+            <Text color={C.agent} bold wrap="truncate">{`${mark}FLEET [${fl.rows.length} ACTIVE${waitingN > 0 ? ` · ${waitingN} WAITING` : ''}]`}</Text>
           )}
           <Box>
             <Box flexGrow={1}>
@@ -1241,15 +1244,18 @@ export const register: Register = (on, options) => {
               else groups.push({ v, c: kindColors[i] })
             })
             const st = stateOf(x.status)
+            const hint = waitHint(x)
+            const nameRoom = hint ? Math.max(6, room - hint.length - 3) : room
             return (
               <Box>
                 <Box flexGrow={1}>
-                  <Text color={stateColor(x.status)}>{x.status === 'busy' ? '● ' : '○ '}</Text>
+                  <Text color={stateColor(x.status)}>{x.status === 'busy' || x.status === 'waiting' ? '● ' : '○ '}</Text>
                   {x.entrypoint === 'claude-desktop' && x.hostId ? (
-                    <Button key={`fleet-${x.id}`} plain label={shorten(x.name, room)} onPress={() => openSession($, x.hostId)} />
+                    <Button key={`fleet-${x.id}`} plain label={shorten(x.name, nameRoom)} onPress={() => openSession($, x.hostId)} />
                   ) : (
-                    <Text bold={x.status === 'busy'} wrap="truncate">{shorten(x.name, room)}</Text>
+                    <Text bold={x.status === 'busy' || x.status === 'waiting'} wrap="truncate">{shorten(x.name, nameRoom)}</Text>
                   )}
+                  {hint ? <Text color={C.amber} wrap="truncate">{` · ${hint}`}</Text> : null}
                 </Box>
                 <Box width={costW} justifyContent="flex-end">
                   {groups.map((g, i) => (
@@ -1468,9 +1474,10 @@ export const register: Register = (on, options) => {
             {modelLine}
           </Box>
         </Box>
-        {cards.length > 0 ? (
-          <Text color={C.agent} backgroundColor={tintOf(C.agent, 0.16)}>{` agents (${cards.length}) `}</Text>
-        ) : null}
+        <Box columnGap={1}>
+          {waitingN > 0 ? <Text color={C.amber} bold backgroundColor={tintOf(C.amber, 0.2)}>{` ${waitingN} waiting `}</Text> : null}
+          {cards.length > 0 ? <Text color={C.agent} backgroundColor={tintOf(C.agent, 0.16)}>{` agents (${cards.length}) `}</Text> : null}
+        </Box>
       </Box>
     ) : (
       <Box justifyContent="space-between" width={W}>
@@ -1484,7 +1491,10 @@ export const register: Register = (on, options) => {
           {showArchitect ? <Text color={C.arch}>{cfg.architectLabel}</Text> : null}
           {showArchitect ? <Text>{advising ? ' ADVISING' : ' ON CALL'}</Text> : null}
         </Text>
-        {cards.length > 0 ? <Text color={C.agent}>{`agents (${cards.length})`}</Text> : null}
+        <Box columnGap={1}>
+          {waitingN > 0 ? <Text color={C.amber} bold>{`${waitingN} waiting`}</Text> : null}
+          {cards.length > 0 ? <Text color={C.agent}>{`agents (${cards.length})`}</Text> : null}
+        </Box>
       </Box>
     )
 
