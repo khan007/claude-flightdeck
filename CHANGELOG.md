@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.32
+
+- Desktop: panel titles are tabs sitting on the top edge of their card, one row above it, instead of a chip inside the card. Every card keeps a free row above it for the tab.
+
 ## 0.3.31
 
 - Terminal: the gate's check strip and its `N OK` summary share one row.

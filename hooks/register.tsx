@@ -640,10 +640,15 @@ export const register: Register = (on, options) => {
       )
 
     // Desktop: a panel's title is an SVG chip (rounded, marked, in the panel's colour); the rest stays live text.
-    const chip = (title: string, color: string) => {
+    // Desktop: the title as a tab sitting on the card's top edge, one row up (so every card keeps a free row above it).
+    const tab = (title: string, color: string) => {
       const { Svg } = $.ui.resolve(e)
-      const c = chipSvg(title, color)
-      return <Svg source={c.svg} alt={c.text} width={c.width} height={c.height} />
+      const c = chipSvg(title, color, 18)
+      return (
+        <Box position="absolute" top={-1} left={1}>
+          <Svg source={c.svg} alt={c.text} width={c.width} height={c.height} />
+        </Box>
+      )
     }
 
     // Desktop: a segmented bar as SVG, `px` wide at most.
@@ -702,10 +707,8 @@ export const register: Register = (on, options) => {
       return isDesk ? (
         <Box flexDirection="column" borderStyle="round" borderColor={dimEdge(C.main)} backgroundColor={tintOf(C.main)} paddingX={1} width={w}>
           {accent(C.main)}
-          <Box justifyContent="space-between">
-            {chip(coreTitle, C.main)}
-            {working}
-          </Box>
+          {tab(coreTitle, C.main)}
+          <Box justifyContent="flex-end">{working}</Box>
           <Text wrap="truncate">
             <Text dimColor>{'Role: Primary Reasoner'}</Text>
             {m.mode ? <Text dimColor>{' · Mode: '}</Text> : null}
@@ -896,9 +899,9 @@ export const register: Register = (on, options) => {
       return (
         <Box flexDirection="column" borderStyle="round" borderColor={isDesk ? dimEdge(C.gate) : C.gate} backgroundColor={isDesk ? tintOf(C.gate) : undefined} paddingX={1} width={w}>
           {isDesk ? accent(C.gate) : null}
+          {isDesk ? tab(`${gateTitle}`, C.gate) : null}
           {isDesk ? (
             <Box justifyContent="space-between" columnGap={1}>
-              {chip(`${gateTitle}`, C.gate)}
               {strip.length > 0 ? checkStrip(strip) : null}
               <Text wrap="truncate">
                 <Text color={C.gate}>{`${okN} OK`}</Text>
@@ -1155,11 +1158,11 @@ export const register: Register = (on, options) => {
       return (
         <Box flexDirection="column" borderStyle="round" borderColor={isDesk ? dimEdge('subtle') : C.faint} backgroundColor={isDesk ? tintOf('subtle', 0.06) : undefined} paddingX={1} width={w}>
           {isDesk ? accent('subtle') : null}
+          {isDesk ? tab(`LIVE BUFFER${viewed ? ' · THIS AGENT' : ''}`, 'subtle') : null}
           {isDesk ? (
             <Box justifyContent="space-between">
               <Box>
-                {chip(`LIVE BUFFER${viewed ? ' · THIS AGENT' : ''}`, 'subtle')}
-                {live ? <Text color={C.main} bold>{' [TURN '}</Text> : null}
+                {live ? <Text color={C.main} bold>{'[TURN '}</Text> : null}
                 {live ? clock('turn-log-clock', t.startedAt, null, C.main) : null}
                 {live ? <Text color={C.main} bold>{']'}</Text> : null}
               </Box>
@@ -1196,9 +1199,7 @@ export const register: Register = (on, options) => {
       return (
         <Box flexDirection="column" borderStyle="round" borderColor={isDesk ? dimEdge(C.agent) : C.faint} backgroundColor={isDesk ? tintOf(C.agent) : undefined} paddingX={1} width={w}>
           {isDesk ? accent(C.agent) : null}
-          {isDesk ? (
-            chip(`FLEET [${fl.rows.length} ACTIVE]`, C.agent)
-          ) : null}
+          {isDesk ? tab(`FLEET [${fl.rows.length} ACTIVE]`, C.agent) : null}
           {isDesk ? null : (
             <Text color={C.main} bold wrap="truncate">{`${mark}FLEET [${fl.rows.length} ACTIVE]`}</Text>
           )}
@@ -1323,7 +1324,7 @@ export const register: Register = (on, options) => {
       <Box flexDirection="column" width={w}>
         {ps.map((p, i) => {
           return (
-            <Box flexDirection="column" marginTop={gap && (i === 0 || (i > 0 && (p === 'fleet' || p === 'log'))) ? 1 : 0}>
+            <Box flexDirection="column" marginTop={gap ? 1 : 0}>
               {draw(p, w)}
               {p === 'agents' ? expandedPanel(w) : null}
             </Box>
