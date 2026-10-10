@@ -655,18 +655,8 @@ export const register: Register = (on, options) => {
       return <Svg source={b.svg} alt={`${label} ${Math.round(pct)}%`} width={b.width} height={b.height} />
     }
 
-    // Desktop: the card's border is dim and a 3px line in the full colour lies over its left edge, between the corners:
-    // a tall SVG in a clipping Box that spans the card, so its height is the card's.
-    const accent = (color: string) => {
-      const { Svg } = $.ui.resolve(e)
-      const line = `<svg xmlns="http://www.w3.org/2000/svg" width="3" height="1500" viewBox="0 0 3 1500"><rect width="3" height="1500" rx="1.5" fill="${hexOf(color)}"/></svg>`
-      return (
-        <Box position="absolute" top={0} bottom={0} left={-1} width={1} overflow="hidden">
-          <Svg source={line} alt="" width={3} height={1500} />
-        </Box>
-      )
-    }
-    const dimEdge = (color: string) => tintOf(color, 0.35)
+    // Desktop: card borders are dark; a bright bar of the panel's colour stands beside each card (see `column`).
+    const dimEdge = (color: string) => tintOf(color, 0.25)
 
     // Terminal frames carry their title (and a status) on the top border, as a titled box does.
     const onBorder = (left: unknown, right?: unknown) => [
@@ -728,7 +718,6 @@ export const register: Register = (on, options) => {
       const colW3 = Math.floor((w - 4 - 2 * Math.max(0, statCols - 1)) / Math.max(1, statCols))
       return isDesk ? (
         <Box flexDirection="column" borderStyle="round" borderColor={dimEdge(C.main)} backgroundColor={tintOf(C.main)} paddingX={1} width={w}>
-          {accent(C.main)}
           <Box justifyContent="space-between">
             {chip(coreTitle, C.main)}
             {working}
@@ -919,7 +908,6 @@ export const register: Register = (on, options) => {
       })
       return (
         <Box flexDirection="column" borderStyle="round" borderColor={isDesk ? dimEdge(C.gate) : C.gate} backgroundColor={isDesk ? tintOf(C.gate) : undefined} paddingX={1} width={w}>
-          {isDesk ? accent(C.gate) : null}
           {isDesk ? (
             <Box justifyContent="space-between" columnGap={1}>
               {chip(`${num('gate')} // ${gateTitle}`, C.gate)}
@@ -1171,7 +1159,6 @@ export const register: Register = (on, options) => {
       )
       return (
         <Box flexDirection="column" borderStyle="round" borderColor={isDesk ? dimEdge('subtle') : C.faint} backgroundColor={isDesk ? tintOf('subtle', 0.06) : undefined} paddingX={1} width={w}>
-          {isDesk ? accent(C.main) : null}
           {isDesk ? (
             <Box justifyContent="space-between">
               <Box>
@@ -1212,7 +1199,6 @@ export const register: Register = (on, options) => {
       const stateColor = (st: string) => (st === 'busy' ? C.amber : st === 'waiting' ? C.cleared : C.gate)
       return (
         <Box flexDirection="column" borderStyle="round" borderColor={isDesk ? dimEdge(C.agent) : C.faint} backgroundColor={isDesk ? tintOf(C.agent) : undefined} paddingX={1} width={w}>
-          {isDesk ? accent(C.agent) : null}
           {isDesk ? (
             chip(`${num('fleet')} // FLEET [${fl.rows.length} ACTIVE]`, C.agent)
           ) : null}
@@ -1318,6 +1304,7 @@ export const register: Register = (on, options) => {
     // The desktop draws boxes with no gap where a terminal row leaves one: give the unlinked boxes a row of air.
     const gap = e.surface !== 'terminal'
     // Panels with the flow between them; the agents panel draws its own rails.
+    const barColor: Partial<Record<Panel, string>> = { main: C.main, gate: C.gate, fleet: C.agent, log: C.main }
     const column = (ps: Panel[], w: number) => (
       <Box flexDirection="column" width={w}>
         {ps.map((p, i) => {
@@ -1327,9 +1314,16 @@ export const register: Register = (on, options) => {
               ? null
               : rail(`link-${p}`, p === 'architect' ? advising : m.isRunning, p === 'architect' ? C.arch : C.main, w)
           return (
-            <Box flexDirection="column" marginTop={gap && i > 0 && (p === 'fleet' || p === 'log') ? 1 : 0}>
+            <Box flexDirection="column" marginTop={gap && (i === 0 || (i > 0 && (p === 'fleet' || p === 'log'))) ? 1 : 0}>
               {link}
-              {draw(p, w)}
+              {isDesk && barColor[p] ? (
+                <Box>
+                  <Box width="1%" backgroundColor={hexOf(barColor[p] as string)} />
+                  {draw(p, w - 1)}
+                </Box>
+              ) : (
+                draw(p, w)
+              )}
               {p === 'agents' ? expandedPanel(w) : null}
             </Box>
           )

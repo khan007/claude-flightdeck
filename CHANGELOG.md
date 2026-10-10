@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.22
+
+- Desktop: each card has a bright bar of its colour beside it (about 1% of the width) and a darker border; a gap now separates the header from the first card. Replaces the overlaid left line, which did not render.
+
 ## 0.3.21
 
 - Desktop: the bright left edge is a 3px SVG line clipped to the card's height, replacing the zero-width box that drew a stray outline.
