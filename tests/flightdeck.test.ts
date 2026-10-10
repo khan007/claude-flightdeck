@@ -525,3 +525,11 @@ test('the accent bar ends curve like the card corner: an arc at the top, its mir
   expect(top.svg).not.toBe(bottom.svg)
   expect(top.height).toBe(9)
 })
+
+test('a tab chip can be dropped below the top of its SVG', () => {
+  const flat = chipSvg('FLEET', 'claude', 18)
+  const dropped = chipSvg('FLEET', 'claude', 18, 5)
+  expect(dropped.height).toBe(flat.height + 5)
+  expect(flat.svg).toContain('y="0.5"')
+  expect(dropped.svg).toContain('y="5.5"')
+})

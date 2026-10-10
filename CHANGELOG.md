@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.34
+
+- Desktop: title tabs sit 5px lower, overlapping the card's top border a little.
+
 ## 0.3.33
 
 - Desktop: cards with a title tab get a two-row gap above them, so the tab no longer overlaps the card above.

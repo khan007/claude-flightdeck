@@ -321,17 +321,18 @@ export const segBarSvg = (pct: number, width: number, color: string, height = 10
 }
 
 /** A panel's title as a rounded chip with a square marker, for the desktop: SVG markup and its pixel size. */
-export const chipSvg = (title: string, color: string, height = 22) => {
+export const chipSvg = (title: string, color: string, height = 22, top = 0) => {
   const hex = hexOf(color)
   const text = title.replace(/[<>&"']/g, '')
   const width = Math.ceil(text.length * 7.3 + 34)
-  const mid = height / 2
+  const mid = top + height / 2
+  const total = height + top
   const svg =
-    `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">` +
-    `<rect x="0.5" y="0.5" width="${width - 1}" height="${height - 1}" rx="6" fill="${hex}" fill-opacity="0.14" stroke="${hex}" stroke-opacity="0.75"/>` +
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${total}" viewBox="0 0 ${width} ${total}">` +
+    `<rect x="0.5" y="${top + 0.5}" width="${width - 1}" height="${height - 1}" rx="6" fill="${hex}" fill-opacity="0.14" stroke="${hex}" stroke-opacity="0.75"/>` +
     `<rect x="9" y="${mid - 3}" width="6" height="6" rx="1" fill="${hex}"/>` +
     `<text x="22" y="${mid + 4}" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="12" font-weight="600" fill="${hex}">${text}</text></svg>`
-  return { svg, width, height, text }
+  return { svg, width, height: total, text }
 }
 
 /** A solid bar of `width` cells: █ filled, ░ empty. */
