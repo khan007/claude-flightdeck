@@ -655,9 +655,17 @@ export const register: Register = (on, options) => {
       return <Svg source={b.svg} alt={`${label} ${Math.round(pct)}%`} width={b.width} height={b.height} />
     }
 
-    // Desktop: the card's border is dim and a hairline in the full colour lies over its left edge, between the corners.
-    // A zero-width Box with a border of its own draws two adjacent lines, so the edge brightens without growing.
-    const accent = (color: string) => <Box position="absolute" top={0} bottom={0} left={-1} width={0} borderStyle="single" borderColor={hexOf(color)} />
+    // Desktop: the card's border is dim and a 3px line in the full colour lies over its left edge, between the corners:
+    // a tall SVG in a clipping Box that spans the card, so its height is the card's.
+    const accent = (color: string) => {
+      const { Svg } = $.ui.resolve(e)
+      const line = `<svg xmlns="http://www.w3.org/2000/svg" width="3" height="1500" viewBox="0 0 3 1500"><rect width="3" height="1500" rx="1.5" fill="${hexOf(color)}"/></svg>`
+      return (
+        <Box position="absolute" top={0} bottom={0} left={-1} width={1} overflow="hidden">
+          <Svg source={line} alt="" width={3} height={1500} />
+        </Box>
+      )
+    }
     const dimEdge = (color: string) => tintOf(color, 0.35)
 
     // Terminal frames carry their title (and a status) on the top border, as a titled box does.

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.21
+
+- Desktop: the bright left edge is a 3px SVG line clipped to the card's height, replacing the zero-width box that drew a stray outline.
+
 ## 0.3.20
 
 - Desktop: the bright left edge is a hairline over the border instead of a solid block, so cards no longer look thicker.
