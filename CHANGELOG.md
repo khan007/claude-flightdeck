@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.20
+
+- Desktop: the bright left edge is a hairline over the border instead of a solid block, so cards no longer look thicker.
+
 ## 0.3.19
 
 - Desktop: card borders are dim, with a bright strip of the panel's colour down the left edge.

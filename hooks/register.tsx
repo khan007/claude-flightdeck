@@ -655,8 +655,9 @@ export const register: Register = (on, options) => {
       return <Svg source={b.svg} alt={`${label} ${Math.round(pct)}%`} width={b.width} height={b.height} />
     }
 
-    // Desktop: the card's border is dim and a bright strip lies over its left edge, between the corners.
-    const accent = (color: string) => <Box position="absolute" top={0} bottom={0} left={-1} width={1} backgroundColor={hexOf(color)} />
+    // Desktop: the card's border is dim and a hairline in the full colour lies over its left edge, between the corners.
+    // A zero-width Box with a border of its own draws two adjacent lines, so the edge brightens without growing.
+    const accent = (color: string) => <Box position="absolute" top={0} bottom={0} left={-1} width={0} borderStyle="single" borderColor={hexOf(color)} />
     const dimEdge = (color: string) => tintOf(color, 0.35)
 
     // Terminal frames carry their title (and a status) on the top border, as a titled box does.
