@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.24
+
+- Desktop: the accent bar has rounded ends (small SVG caps above and below the stretching middle).
+
 ## 0.3.23
 
 - Desktop: the accent bar is about 2px (17% of a one-cell column) instead of 8px.

@@ -291,6 +291,14 @@ export const checkStripSvg = (cells: { color: string; dim: boolean }[], width: n
   return { svg: `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${height}" viewBox="0 0 ${w} ${height}">${rects}</svg>`, width: w, height, count: shown.length }
 }
 
+/** One rounded end of the desktop accent bar: a `w` by `h` px SVG, round at the top (or the bottom when `isTop` is false). */
+export const barCapSvg = (color: string, isTop: boolean, w = 2, h = 4) => {
+  const hex = hexOf(color)
+  const r = w / 2
+  const d = isTop ? `M0 ${h} V${r} A${r} ${r} 0 0 1 ${w} ${r} V${h} Z` : `M0 0 V${h - r} A${r} ${r} 0 0 0 ${w} ${h - r} V0 Z`
+  return { svg: `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"><path d="${d}" fill="${hex}"/></svg>`, width: w, height: h }
+}
+
 /** A segmented bar for the desktop: rounded cells, `pct` of them lit in `color`, the rest faint. */
 export const segBarSvg = (pct: number, width: number, color: string, height = 10) => {
   const hex = hexOf(color)

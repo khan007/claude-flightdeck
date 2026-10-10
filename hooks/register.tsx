@@ -16,6 +16,7 @@ import {
   applyStep,
   blocks,
   bucketOf,
+  barCapSvg,
   checkStripSvg,
   chipSvg,
   hexOf,
@@ -1304,6 +1305,12 @@ export const register: Register = (on, options) => {
     // The desktop draws boxes with no gap where a terminal row leaves one: give the unlinked boxes a row of air.
     const gap = e.surface !== 'terminal'
     // Panels with the flow between them; the agents panel draws its own rails.
+    // Desktop: a rounded end for the accent bar, so its ends are round instead of square.
+    const accentCap = (color: string, isTop: boolean) => {
+      const { Svg } = $.ui.resolve(e)
+      const c = barCapSvg(color, isTop)
+      return <Svg source={c.svg} alt="" width={c.width} height={c.height} />
+    }
     const barColor: Partial<Record<Panel, string>> = { main: C.main, gate: C.gate, fleet: C.agent, log: C.main }
     const column = (ps: Panel[], w: number) => (
       <Box flexDirection="column" width={w}>
@@ -1319,7 +1326,11 @@ export const register: Register = (on, options) => {
               {isDesk && barColor[p] ? (
                 <Box>
                   <Box width={1} justifyContent="flex-end">
-                    <Box width="17%" backgroundColor={hexOf(barColor[p] as string)} />
+                    <Box width="17%" flexDirection="column">
+                      {accentCap(barColor[p] as string, true)}
+                      <Box flexGrow={1} backgroundColor={hexOf(barColor[p] as string)} />
+                      {accentCap(barColor[p] as string, false)}
+                    </Box>
                   </Box>
                   {draw(p, w - 1)}
                 </Box>

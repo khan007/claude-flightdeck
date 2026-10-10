@@ -11,6 +11,7 @@ import {
   describeInput,
   endConsult,
   blocks,
+  barCapSvg,
   checkStripSvg,
   chipSvg,
   logoSvg,
@@ -513,4 +514,13 @@ test('logo badge and gate strip draw as SVG', () => {
   expect(strip.svg).toContain('#4ade80')
   expect(strip.svg).toContain('fill-opacity="0.45"')
   expect(checkStripSvg(Array.from({ length: 50 }, () => ({ color: 'success', dim: false })), 60).count).toBeLessThan(10)
+})
+
+test('the accent bar ends are round: an arc at the top cap, one at the bottom cap', () => {
+  const top = barCapSvg('claude', true)
+  const bottom = barCapSvg('claude', false)
+  expect(top.svg).toContain('#d97757')
+  expect(top.svg).toContain(' A1 1 ')
+  expect(bottom.svg).toContain(' A1 1 ')
+  expect(top.svg).not.toBe(bottom.svg)
 })
