@@ -613,9 +613,6 @@ export const register: Register = (on, options) => {
     const decider = m.mode === 'auto' ? 'classifier' : 'you'
     // Desktop (and the editor and phone) draw rounded cards; the terminal draws marked, boxed sections.
     const isDesk = e.surface !== 'terminal'
-    // Panels with a heading are numbered in the order shown; the receipt and loops have none.
-    const titled = panels.filter(p => p !== 'receipt' && p !== 'loops')
-    const num = (p: Panel) => String(titled.indexOf(p) + 1).padStart(2, '0')
     const mark = isDesk ? '' : '■ '
 
     // A connector between panels: animated while its flow is live, a dim line otherwise.
@@ -678,7 +675,7 @@ export const register: Register = (on, options) => {
     const effortN = { low: 1, medium: 2, high: 3, xhigh: 4, max: 4 }[m.effort] ?? 0
     const effortName = { low: 'LOW', medium: 'MED', high: 'HIGH', xhigh: 'XHIGH', max: 'MAX' }[m.effort] ?? '—'
     const ctxHot = u.pct !== null && u.pct >= 80
-    const coreTitle = `${mark}${num('main')} // AGENT CORE [${modelName.toUpperCase()}]`
+    const coreTitle = `${mark}AGENT CORE [${modelName.toUpperCase()}]`
     const winK = `${Math.round(u.window / 1000)}k`
     const ctxBar = (width: number) => {
       const b = blocks(u.pct ?? 0, width)
@@ -822,7 +819,7 @@ export const register: Register = (on, options) => {
         <Box flexDirection="column" borderStyle="round" borderColor={C.arch} paddingX={1} width={w}>
           <Box justifyContent="space-between">
             <Text color={C.arch} bold>
-              {`${mark}${num('architect')} // `}{cfg.architectLabel} · {advising ? 'advising' : 'on call'}
+              {`${mark}`}{cfg.architectLabel} · {advising ? 'advising' : 'on call'}
             </Text>
             <Text>
               <Text dimColor>consults </Text>
@@ -913,7 +910,7 @@ export const register: Register = (on, options) => {
           {isDesk ? accent(C.gate) : null}
           {isDesk ? (
             <Box justifyContent="space-between" columnGap={1}>
-              {chip(`${num('gate')} // ${gateTitle}`, C.gate)}
+              {chip(`${gateTitle}`, C.gate)}
               {strip.length > 0 ? checkStrip(strip) : null}
               <Text wrap="truncate">
                 <Text color={C.gate}>{`${okN} OK`}</Text>
@@ -922,7 +919,7 @@ export const register: Register = (on, options) => {
               </Text>
             </Box>
           ) : null}
-          {isDesk ? null : onBorder(borderTitle(`${mark}${num('gate')} // ${gateTitle} PERMISSIONS`, C.gate), <Text dimColor>{` ${s.total} CHECKS TOTAL `}</Text>)}
+          {isDesk ? null : onBorder(borderTitle(`${mark}${gateTitle} PERMISSIONS`, C.gate), <Text dimColor>{` ${s.total} CHECKS TOTAL `}</Text>)}
           {isDesk ? (strip.length === 0 ? <Text color={C.faint}>no checks yet</Text> : null) : stripRow}
           {isDesk ? (
             <Box flexDirection="column">
@@ -983,7 +980,7 @@ export const register: Register = (on, options) => {
       const useLanes = cards.length > fit
       const header = (
         <Box justifyContent="space-between" width={w}>
-          <Text bold>{`${mark}${num('agents')} // AGENTS · ${running.length} running · ${cards.length} total`}</Text>
+          <Text bold>{`${mark}AGENTS · ${running.length} running · ${cards.length} total`}</Text>
           {cards.length > 0 ? <Text color={C.faint}>1-{Math.min(cards.length, useLanes ? 6 : fit)} expand</Text> : null}
         </Box>
       )
@@ -1166,7 +1163,7 @@ export const register: Register = (on, options) => {
           {isDesk ? (
             <Box justifyContent="space-between">
               <Box>
-                {chip(`${num('log')} // LIVE BUFFER${viewed ? ' · THIS AGENT' : ''}`, 'subtle')}
+                {chip(`LIVE BUFFER${viewed ? ' · THIS AGENT' : ''}`, 'subtle')}
                 {live ? <Text color={C.main} bold>{' [TURN '}</Text> : null}
                 {live ? clock('turn-log-clock', t.startedAt, null, C.main) : null}
                 {live ? <Text color={C.main} bold>{']'}</Text> : null}
@@ -1178,7 +1175,7 @@ export const register: Register = (on, options) => {
             ? null
             : onBorder(
                 <Box>
-                  <Text color={C.dim} bold wrap="truncate">{` ${mark}${num('log')} // LIVE BUFFER${viewed ? ' · THIS AGENT' : ''}`}</Text>
+                  <Text color={C.dim} bold wrap="truncate">{` ${mark}LIVE BUFFER${viewed ? ' · THIS AGENT' : ''}`}</Text>
                   {live ? <Text color={C.main} bold>{' [TURN '}</Text> : null}
                   {live ? clock('turn-log-clock', t.startedAt, null, C.main) : null}
                   {live ? <Text color={C.main} bold>{'] '}</Text> : <Text> </Text>}
@@ -1205,9 +1202,9 @@ export const register: Register = (on, options) => {
         <Box flexDirection="column" borderStyle="round" borderColor={isDesk ? dimEdge(C.agent) : C.faint} backgroundColor={isDesk ? tintOf(C.agent) : undefined} paddingX={1} width={w}>
           {isDesk ? accent(C.agent) : null}
           {isDesk ? (
-            chip(`${num('fleet')} // FLEET [${fl.rows.length} ACTIVE]`, C.agent)
+            chip(`FLEET [${fl.rows.length} ACTIVE]`, C.agent)
           ) : null}
-          {isDesk ? null : onBorder(borderTitle(`${mark}${num('fleet')} // FLEET [${fl.rows.length} ACTIVE]`, C.main))}
+          {isDesk ? null : onBorder(borderTitle(`${mark}FLEET [${fl.rows.length} ACTIVE]`, C.main))}
           <Box>
             <Box flexGrow={1}>
               <Text dimColor>{'  WORKER / ID'}</Text>

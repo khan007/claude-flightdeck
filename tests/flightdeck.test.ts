@@ -235,7 +235,7 @@ test('a fresh session draws on every surface and width, empty panels hidden', as
       expect(JSON.stringify(await ui.drawn())).toMatch(/AGENT CORE/)
       expect(JSON.stringify(await ui.drawn())).toMatch(/LIVE BUFFER/)
       expect(await ui.find({ text: /agents ·/ })).toBeUndefined() // no subagents: no agents panel
-      expect(await ui.find({ text: /\/\/ GATE/ })).toBeUndefined() // no checks yet: no gate panel
+      expect(await ui.find({ text: /GATEWAY/ })).toBeUndefined() // no checks yet: no gate panel
       await ui.unmount()
     }
   }
@@ -359,7 +359,7 @@ test('config changes labels, hides panels and turns the moments off', { options:
   await $.agent.spawn(spawn('fable-advisor:fable-advisor', 'final review'))
   const ui = await $.ui.mount({ ...pane(64), surface: 'terminal' })
   expect(await ui.find({ text: /REVIEWER · advising/ })).toBeDefined()
-  expect(await ui.find({ text: /\/\/ GATE/ })).toBeUndefined()
+  expect(await ui.find({ text: /GATEWAY/ })).toBeUndefined()
   expect(await ui.find({ text: /before a plan/ })).toBeUndefined()
   await ui.unmount()
 })

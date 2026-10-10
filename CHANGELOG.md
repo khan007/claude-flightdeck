@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.29
+
+- Panel titles are no longer numbered (`AGENT CORE`, `GATEWAY`, `FLEET`, `LIVE BUFFER`).
+
 ## 0.3.28
 
 - Desktop: the context bar is sized for 8.3px per column instead of 7.2, so it runs the full width under the percentage.
