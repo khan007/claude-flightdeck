@@ -1325,12 +1325,12 @@ export const register: Register = (on, options) => {
               {link}
               {isDesk && barColor[p] ? (
                 <Box>
-                  <Box width={1} justifyContent="flex-end">
-                    <Box width="17%" flexDirection="column">
-                      {accentCap(barColor[p] as string, true)}
-                      <Box flexGrow={1} backgroundColor={hexOf(barColor[p] as string)} />
-                      {accentCap(barColor[p] as string, false)}
+                  <Box width={1} flexDirection="column">
+                    {accentCap(barColor[p] as string, true)}
+                    <Box flexGrow={1}>
+                      <Box width="17%" backgroundColor={hexOf(barColor[p] as string)} />
                     </Box>
+                    {accentCap(barColor[p] as string, false)}
                   </Box>
                   {draw(p, w - 1)}
                 </Box>

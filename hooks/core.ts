@@ -295,7 +295,7 @@ export const checkStripSvg = (cells: { color: string; dim: boolean }[], width: n
  * One end of the desktop accent bar: a quarter-circle that curves from the bar toward the card, as the card's own
  * rounded corner does. The bar's line runs down the left edge of this `size` px SVG; `isTop` curves it over the top.
  */
-export const barCapSvg = (color: string, isTop: boolean, size = 10) => {
+export const barCapSvg = (color: string, isTop: boolean, size = 9) => {
   const hex = hexOf(color)
   const r = size - 2
   const d = isTop ? `M1 ${size - 1} A${r} ${r} 0 0 1 ${size - 1} 1` : `M1 1 A${r} ${r} 0 0 0 ${size - 1} ${size - 1}`

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.26
+
+- Desktop: the accent bar lives in a full-width one-cell column, so its curved ends are no longer squeezed by a 2px parent.
+
 ## 0.3.25
 
 - Desktop: the accent bar's ends curve toward the card like its rounded corner. The live buffer is grey (chip, bar and, in the terminal, its title).
