@@ -320,8 +320,15 @@ export const segBarSvg = (pct: number, width: number, color: string, height = 10
   return { svg: `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${height}" viewBox="0 0 ${w} ${height}">${rects}</svg>`, width: w, height, lit, n }
 }
 
+/** `fg` laid over `bg` at `alpha`, as a solid hex: a translucent tint made opaque so nothing behind it shows through. */
+export const blendHex = (fg: string, bg: string, alpha: number) => {
+  const ch = (h: string, i: number) => parseInt(h.slice(1 + i * 2, 3 + i * 2), 16)
+  const mix = (i: number) => Math.round(ch(hexOf(fg), i) * alpha + ch(bg, i) * (1 - alpha)).toString(16).padStart(2, '0')
+  return `#${mix(0)}${mix(1)}${mix(2)}`
+}
+
 /** A panel's title as a rounded chip with a square marker, for the desktop: SVG markup and its pixel size. */
-export const chipSvg = (title: string, color: string, height = 22, top = 0) => {
+export const chipSvg = (title: string, color: string, height = 22, top = 0, solidOn?: string) => {
   const hex = hexOf(color)
   const text = title.replace(/[<>&"']/g, '')
   const width = Math.ceil(text.length * 7.3 + 34)
@@ -329,7 +336,7 @@ export const chipSvg = (title: string, color: string, height = 22, top = 0) => {
   const total = height + top
   const svg =
     `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${total}" viewBox="0 0 ${width} ${total}">` +
-    `<rect x="0.5" y="${top + 0.5}" width="${width - 1}" height="${height - 1}" rx="6" fill="${hex}" fill-opacity="0.14" stroke="${hex}" stroke-opacity="0.75"/>` +
+    `<rect x="0.5" y="${top + 0.5}" width="${width - 1}" height="${height - 1}" rx="6" fill="${solidOn ? blendHex(hex, solidOn, 0.14) : hex}" fill-opacity="${solidOn ? 1 : 0.14}" stroke="${hex}" stroke-opacity="0.75"/>` +
     `<rect x="9" y="${mid - 3}" width="6" height="6" rx="1" fill="${hex}"/>` +
     `<text x="22" y="${mid + 4}" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="12" font-weight="600" fill="${hex}">${text}</text></svg>`
   return { svg, width, height: total, text }

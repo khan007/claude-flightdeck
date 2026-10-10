@@ -12,6 +12,7 @@ import {
   endConsult,
   blocks,
   barCapSvg,
+  blendHex,
   checkStripSvg,
   chipSvg,
   logoSvg,
@@ -532,4 +533,13 @@ test('a tab chip can be dropped below the top of its SVG', () => {
   expect(dropped.height).toBe(flat.height + 5)
   expect(flat.svg).toContain('y="0.5"')
   expect(dropped.svg).toContain('y="5.5"')
+})
+
+test('a tab on a dark pane is solid: the tint is blended over the pane colour', () => {
+  expect(blendHex('#ffffff', '#000000', 0.5)).toBe('#808080')
+  expect(blendHex('#112233', '#000000', 1)).toBe('#112233')
+  const solid = chipSvg('FLEET', '#ff0000', 18, 5, '#000000')
+  expect(solid.svg).toContain('fill-opacity="1"')
+  expect(solid.svg).toContain('fill="#240000"')
+  expect(chipSvg('FLEET', '#ff0000', 18).svg).toContain('fill-opacity="0.14"')
 })

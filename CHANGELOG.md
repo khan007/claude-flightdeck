@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.35
+
+- Desktop: title tabs have a solid fill (the tint blended over a dark pane colour), so the card's border no longer shows through them.
+
 ## 0.3.34
 
 - Desktop: title tabs sit 5px lower, overlapping the card's top border a little.
