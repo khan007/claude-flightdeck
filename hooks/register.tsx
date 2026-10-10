@@ -597,7 +597,6 @@ export const register: Register = (on, options) => {
     const advising = isAdvising(a)
     const running = cards.filter(c => c.status === 'running')
     const showArchitect = a.consults.length > 0 || a.ids.length > 0
-    const motion = cfg.motion && hasClient
     // A panel with nothing to show yet takes no room: most sessions never spawn an agent.
     const isEmpty: Record<Panel, boolean> = {
       main: false,
@@ -614,20 +613,6 @@ export const register: Register = (on, options) => {
     // Desktop (and the editor and phone) draw rounded cards; the terminal draws marked, boxed sections.
     const isDesk = e.surface !== 'terminal'
     const mark = isDesk ? '' : '■ '
-
-    // A connector between panels: animated while its flow is live, a dim line otherwise.
-    const rail = (key: string, active: boolean, color: string, width: number, marks: number[] = [], isMerge = false) =>
-      motion ? (
-        <els.Client
-          key={key}
-          module="./rail.tsx"
-          width={width}
-          height={1}
-          props={{ active, width, color, dim: C.faint, marks, isMerge }}
-        />
-      ) : (
-        <Text color={C.faint}>{'─'.repeat(Math.max(1, width))}</Text>
-      )
 
     // A start time of 0 is unknown (state saved before it was recorded): no clock, not decades.
     const clock = (key: string, since: number, endAt: number | null, color: string) =>
@@ -977,30 +962,40 @@ export const register: Register = (on, options) => {
       update($, view, x => ({ ...normalize(DEFAULT_VIEW, x), expanded: normalize(DEFAULT_VIEW, x).expanded === id ? null : id }))
 
     const agentsPanel = (w: number) => {
-      // Cards need 20 columns each; when the pane can't hold the limit, lanes take over.
-      const fit = Math.max(1, Math.min(cfg.maxCards, Math.floor((w + 1) / 21)))
+      // The agents sit in a card like the other panels; its content is 4 columns narrower (border and padding).
+      const iw = w - 4
+      // Cards need 20 columns each; when the card can't hold the limit, lanes take over.
+      const fit = Math.max(1, Math.min(cfg.maxCards, Math.floor((iw + 1) / 21)))
       const useLanes = cards.length > fit
-      const header = (
-        <Box justifyContent="space-between" width={w}>
-          <Text bold>{`${mark}AGENTS · ${running.length} running · ${cards.length} total`}</Text>
-          {cards.length > 0 ? <Text color={C.faint}>1-{Math.min(cards.length, useLanes ? 6 : fit)} expand</Text> : null}
+      const frame = (body: unknown) => (
+        <Box
+          flexDirection="column"
+          borderStyle="round"
+          borderColor={isDesk ? dimEdge(C.agent) : C.agent}
+          backgroundColor={isDesk ? tintOf(C.agent) : undefined}
+          paddingX={1}
+          width={w}
+        >
+          {isDesk ? accent(C.agent) : null}
+          {isDesk ? tab(`AGENTS [${running.length} RUNNING]`, C.agent) : null}
+          <Box justifyContent="space-between">
+            {isDesk ? (
+              <Text dimColor>{`${cards.length} total`}</Text>
+            ) : (
+              <Text color={C.agent} bold wrap="truncate">{`${mark}AGENTS · ${running.length} running · ${cards.length} total`}</Text>
+            )}
+            {cards.length > 0 ? <Text color={C.faint}>1-{Math.min(cards.length, useLanes ? 6 : fit)} expand</Text> : null}
+          </Box>
+          {body}
         </Box>
       )
-      if (cards.length === 0) {
-        return (
-          <Box flexDirection="column" width={w}>
-            {header}
-            <Text color={C.faint}>no subagents yet</Text>
-          </Box>
-        )
-      }
+      if (cards.length === 0) return frame(<Text color={C.faint}>no subagents yet</Text>)
       if (useLanes) {
         const shown = cards.slice(-6)
-        const barW = Math.max(8, w - 28)
+        const barW = Math.max(8, iw - 28)
         const geo = lanes(shown, now, barW)
-        return (
-          <Box flexDirection="column" width={w}>
-            {header}
+        return frame(
+          <Box flexDirection="column">
             {cards.length > shown.length ? <Text color={C.faint}>{`+${cards.length - shown.length} earlier`}</Text> : null}
             {shown.map((c, i) => {
               const gm = geo[i]
@@ -1018,51 +1013,45 @@ export const register: Register = (on, options) => {
                 </Box>
               )
             })}
-          </Box>
+          </Box>,
         )
       }
       const shown = cards.slice(-fit)
-      const cardW = Math.max(20, Math.floor((w - (shown.length - 1)) / shown.length))
-      const centers = shown.map((_, i) => i * (cardW + 1) + Math.floor(cardW / 2))
-      return (
-        <Box flexDirection="column" width={w}>
-          {header}
-          {rail('fan-out', running.length > 0, C.agent, w, centers)}
-          <Box columnGap={1}>
-            {shown.map((c, i) => {
-              const isViewed = viewed === c.id
-              const sameModel = !c.model || prettyModel(c.model) === modelName
-              return (
-                <Box
-                  flexDirection="column"
-                  borderStyle={isViewed ? 'double' : 'round'}
-                  borderColor={c.lastStop === 'max_tokens' ? C.warn : C.agent}
-                  borderDimColor={c.status !== 'running' && !isViewed}
-                  width={cardW}
-                  paddingX={1}
-                >
-                  <Button key={`card-${c.id}`} plain hotkey={String(i + 1)} label={titleLines(cardTitle(c), cardW - 7, cardW - 4)[0]} onPress={expandOnPress(c.id)} />
-                  <Text bold wrap="truncate">
-                    {titleLines(cardTitle(c), cardW - 7, cardW - 4)[1]}
+      const cardW = Math.max(20, Math.floor((iw - (shown.length - 1)) / shown.length))
+      return frame(
+        <Box columnGap={1}>
+          {shown.map((c, i) => {
+            const isViewed = viewed === c.id
+            const sameModel = !c.model || prettyModel(c.model) === modelName
+            return (
+              <Box
+                flexDirection="column"
+                borderStyle={isViewed ? 'double' : 'round'}
+                borderColor={c.lastStop === 'max_tokens' ? C.warn : isDesk ? dimEdge(C.agent) : C.agent}
+                borderDimColor={c.status !== 'running' && !isViewed}
+                width={cardW}
+                paddingX={1}
+              >
+                <Button key={`card-${c.id}`} plain hotkey={String(i + 1)} label={titleLines(cardTitle(c), cardW - 7, cardW - 4)[0]} onPress={expandOnPress(c.id)} />
+                <Text bold wrap="truncate">
+                  {titleLines(cardTitle(c), cardW - 7, cardW - 4)[1]}
+                </Text>
+                <Text color={C.dim} wrap="truncate">
+                  {sameModel ? c.type : `${c.type} · ${prettyModel(c.model)}`}
+                </Text>
+                <Text dimColor wrap="truncate">
+                  {c.steps > 0 ? `ctx ${kTokens(c.ctx)} · out ${kTokens(c.out)} · ${c.steps} st` : 'starting…'}
+                </Text>
+                <Box>
+                  <Text color={c.lastStop === 'max_tokens' ? C.warn : statusColor(c)}>
+                    {cardW >= 26 ? `${glyph(c)} ${c.lastStop === 'max_tokens' ? 'max_tokens' : c.status} ` : `${glyph(c)} `}
                   </Text>
-                  <Text color={C.dim} wrap="truncate">
-                    {sameModel ? c.type : `${c.type} · ${prettyModel(c.model)}`}
-                  </Text>
-                  <Text dimColor wrap="truncate">
-                    {c.steps > 0 ? `ctx ${kTokens(c.ctx)} · out ${kTokens(c.out)} · ${c.steps} st` : 'starting…'}
-                  </Text>
-                  <Box>
-                    <Text color={c.lastStop === 'max_tokens' ? C.warn : statusColor(c)}>
-                      {cardW >= 26 ? `${glyph(c)} ${c.lastStop === 'max_tokens' ? 'max_tokens' : c.status} ` : `${glyph(c)} `}
-                    </Text>
-                    <Box flexShrink={0}>{clock(`card-clock-${c.id}`, c.spawnedAt, c.endedAt, C.dim)}</Box>
-                  </Box>
+                  <Box flexShrink={0}>{clock(`card-clock-${c.id}`, c.spawnedAt, c.endedAt, C.dim)}</Box>
                 </Box>
-              )
-            })}
-          </Box>
-          {rail('merge', running.length > 0, C.agent, w, centers, true)}
-        </Box>
+              </Box>
+            )
+          })}
+        </Box>,
       )
     }
 
@@ -1307,7 +1296,7 @@ export const register: Register = (on, options) => {
 
     // The desktop draws boxes with no gap where a terminal row leaves one: give the unlinked boxes a row of air.
     const gap = e.surface !== 'terminal'
-    // Panels stack directly; only the agents panel draws rails (its fan-out and merge).
+    // Panels stack directly.
     // Desktop: a rounded end for the accent bar, so its ends are round instead of square.
     const accentCap = (color: string, isTop: boolean) => {
       const { Svg } = $.ui.resolve(e)
@@ -1328,7 +1317,7 @@ export const register: Register = (on, options) => {
       <Box flexDirection="column" width={w}>
         {ps.map((p, i) => {
           return (
-            <Box flexDirection="column" marginTop={gap ? (p === 'main' || p === 'gate' || p === 'fleet' || p === 'log' ? 2 : 1) : 0}>
+            <Box flexDirection="column" marginTop={gap ? (p === 'main' || p === 'gate' || p === 'fleet' || p === 'log' || p === 'agents' ? 2 : 1) : 0}>
               {draw(p, w)}
               {p === 'agents' ? expandedPanel(w) : null}
             </Box>

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.37
+
+- The agents panel is a card like the others (title tab and accent on desktop, a boxed section in the terminal); the dotted fan-out and merge connectors are gone. The `motion` setting no longer has anything to animate.
+
 ## 0.3.36
 
 - Desktop: title tabs sit 2px lower still (7px below the top of their box).
