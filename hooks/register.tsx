@@ -16,7 +16,9 @@ import {
   applyStep,
   blocks,
   bucketOf,
+  checkStripSvg,
   chipSvg,
+  logoSvg,
   segBarSvg,
   tintOf,
   cardTitle,
@@ -695,8 +697,8 @@ export const register: Register = (on, options) => {
       </Box>
     )
     const working = (
-      <Text color={m.isRunning ? C.main : C.dim} bold={isDesk}>
-        {isDesk ? (m.isRunning ? '● WORKING' : '○ IDLE') : m.isRunning ? '● working' : '○ idle'}
+      <Text color={m.isRunning ? C.cleared : C.dim} bold={isDesk} backgroundColor={isDesk ? tintOf(m.isRunning ? C.gate : 'subtle', 0.16) : undefined}>
+        {isDesk ? (m.isRunning ? ' ● WORKING ' : ' ○ IDLE ') : m.isRunning ? '● working' : '○ idle'}
       </Text>
     )
     const tile = (width: number, label: string, body: unknown) => (
@@ -716,12 +718,11 @@ export const register: Register = (on, options) => {
             {chip(coreTitle, C.main)}
             {working}
           </Box>
-          {m.mode ? (
-            <Text wrap="truncate">
-              <Text dimColor>Mode: </Text>
-              <Text color={C.amber} bold>{m.mode.toUpperCase()}</Text>
-            </Text>
-          ) : null}
+          <Text wrap="truncate">
+            <Text dimColor>{'Role: Primary Reasoner'}</Text>
+            {m.mode ? <Text dimColor>{' · Mode: '}</Text> : null}
+            {m.mode ? <Text color={C.amber} bold>{m.mode.toUpperCase()}</Text> : null}
+          </Text>
           <Box columnGap={1}>
             {tile(
               tileW,
@@ -860,6 +861,12 @@ export const register: Register = (on, options) => {
     const s = gateSummary(g)
     const verdictColor = (c: Check) =>
       c.verdict === 'rule' ? C.gate : c.verdict === 'cleared' ? C.cleared : c.verdict === 'ask' ? C.amber : C.warn
+    // Desktop: the gate's recent checks as small verdict-coloured cells.
+    const checkStrip = (checks: Check[]) => {
+      const { Svg } = $.ui.resolve(e)
+      const st = checkStripSvg(checks.map(c => ({ color: verdictColor(c), dim: c.inSubagent })), 130)
+      return <Svg source={st.svg} alt={`${checks.length} recent checks`} width={st.width} height={st.height} />
+    }
     const gateTitle = cfg.gateLabel === 'GATE' ? 'GATEWAY' : cfg.gateLabel
     const gatePanel = (w: number) => {
       const strip = g.recent.slice(-Math.max(8, w - 4))
@@ -898,8 +905,9 @@ export const register: Register = (on, options) => {
       return (
         <Box flexDirection="column" borderStyle="round" borderColor={C.gate} backgroundColor={isDesk ? tintOf(C.gate) : undefined} paddingX={1} width={w}>
           {isDesk ? (
-            <Box justifyContent="space-between">
+            <Box justifyContent="space-between" columnGap={1}>
               {chip(`${num('gate')} // ${gateTitle}`, C.gate)}
+              {strip.length > 0 ? checkStrip(strip) : null}
               <Text wrap="truncate">
                 <Text color={C.gate}>{`${okN} OK`}</Text>
                 {s.ask > 0 ? <Text color={C.amber}>{` · ${s.ask} PEND`}</Text> : null}
@@ -908,7 +916,7 @@ export const register: Register = (on, options) => {
             </Box>
           ) : null}
           {isDesk ? null : onBorder(borderTitle(`${mark}${num('gate')} // ${gateTitle} PERMISSIONS`, C.gate), <Text dimColor>{` ${s.total} CHECKS TOTAL `}</Text>)}
-          {stripRow}
+          {isDesk ? (strip.length === 0 ? <Text color={C.faint}>no checks yet</Text> : null) : stripRow}
           {isDesk ? (
             <Box flexDirection="column">
               <Text dimColor>{`${s.total} CHECKS:`}</Text>
@@ -1125,7 +1133,7 @@ export const register: Register = (on, options) => {
     const logPanel = (w: number) => {
       const live = m.isRunning && t.startedAt > 0
       const lines = (
-        <Box flexDirection="column" borderStyle={isDesk ? 'round' : undefined} borderColor={C.faint} paddingX={isDesk ? 1 : 0}>
+        <Box flexDirection="column" borderStyle={isDesk ? 'round' : undefined} borderColor={C.faint} backgroundColor={isDesk ? '#00000040' : undefined} paddingX={isDesk ? 1 : 0}>
           {shownLines.length === 0 ? <Text color={C.faint}>nothing yet</Text> : null}
           {shownLines.map(l => (
             <Box>
@@ -1248,7 +1256,7 @@ export const register: Register = (on, options) => {
                 ) : null}
                 <Box width={stateW} justifyContent="flex-end">
                   {isDesk ? (
-                    <Text color={stateColor(x.status)} bold>{` ${st} `}</Text>
+                    <Text color={stateColor(x.status)} bold backgroundColor={tintOf(stateColor(x.status), 0.18)}>{` ${st} `}</Text>
                   ) : (
                     <Text color={stateColor(x.status)}>{`[${st}]`}</Text>
                   )}
@@ -1412,8 +1420,39 @@ export const register: Register = (on, options) => {
       column(panels, W)
     )
 
-    const heading = (
-      <Box justifyContent="space-between" borderStyle={isDesk ? 'round' : undefined} borderColor={C.faint} paddingX={isDesk ? 1 : 0} width={W}>
+    const modelLine = (
+      <Text wrap="truncate">
+        <Text color={C.main} bold>{modelName.toUpperCase()}</Text>
+        <Text color={C.dim}>{' :: '}</Text>
+        <Text color={m.isRunning ? C.gate : C.dim} bold>{m.isRunning ? 'RUNNING' : 'IDLE'}</Text>
+        {showArchitect ? <Text color={C.dim}>{' · '}</Text> : null}
+        {showArchitect ? <Text color={C.arch}>{cfg.architectLabel}</Text> : null}
+        {showArchitect ? <Text>{advising ? ' ADVISING' : ' ON CALL'}</Text> : null}
+      </Text>
+    )
+    const logo = (() => {
+      const { Svg } = $.ui.resolve(e)
+      const l = logoSvg(C.main)
+      return <Svg source={l.svg} alt="Flightdeck" width={l.size} height={l.size} />
+    })()
+    const heading = isDesk ? (
+      <Box justifyContent="space-between" borderStyle="round" borderColor={C.faint} backgroundColor={tintOf('subtle', 0.06)} paddingX={1} width={W}>
+        <Box columnGap={1}>
+          {logo}
+          <Box flexDirection="column">
+            <Text wrap="truncate">
+              <Text color={C.main} bold>FLIGHTDECK</Text>
+              {ver ? <Text dimColor>{` v${ver}`}</Text> : null}
+            </Text>
+            {modelLine}
+          </Box>
+        </Box>
+        {cards.length > 0 ? (
+          <Text color={C.agent} backgroundColor={tintOf(C.agent, 0.16)}>{` agents (${cards.length}) `}</Text>
+        ) : null}
+      </Box>
+    ) : (
+      <Box justifyContent="space-between" width={W}>
         <Text wrap="truncate">
           <Text color={C.main} bold>FLIGHTDECK</Text>
           {ver ? <Text dimColor>{` v${ver}`}</Text> : null}

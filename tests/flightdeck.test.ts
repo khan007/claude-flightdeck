@@ -11,7 +11,9 @@ import {
   describeInput,
   endConsult,
   blocks,
+  checkStripSvg,
   chipSvg,
+  logoSvg,
   segBarSvg,
   tintOf,
   fitLegend,
@@ -502,4 +504,13 @@ test('desktop tint and segmented bar', () => {
   expect(segBarSvg(0, 100, 'claude').lit).toBe(0)
   expect(segBarSvg(1, 100, 'claude').lit).toBe(1) // a sliver still shows
   expect(segBarSvg(100, 100, 'claude').lit).toBe(segBarSvg(100, 100, 'claude').n)
+})
+
+test('logo badge and gate strip draw as SVG', () => {
+  expect(logoSvg('claude').svg).toContain('#d97757')
+  const strip = checkStripSvg([{ color: 'success', dim: false }, { color: 'error', dim: true }, { color: '#112233', dim: false }], 200)
+  expect(strip.count).toBe(3)
+  expect(strip.svg).toContain('#4ade80')
+  expect(strip.svg).toContain('fill-opacity="0.45"')
+  expect(checkStripSvg(Array.from({ length: 50 }, () => ({ color: 'success', dim: false })), 60).count).toBeLessThan(10)
 })

@@ -262,6 +262,35 @@ export const hexOf = (c: string) => (c.startsWith('#') ? c : (THEME_HEX[c] ?? '#
 /** A panel's card tint: its colour at a low alpha, as an 8-digit hex, so it sits on any pane background. */
 export const tintOf = (c: string, alpha = 0.08) => `${hexOf(c)}${Math.round(alpha * 255).toString(16).padStart(2, '0')}`
 
+/** The header's logo badge for the desktop: a rounded square holding stacked layers. */
+export const logoSvg = (color: string, size = 36) => {
+  const hex = hexOf(color)
+  const m = size / 2
+  const d = size * 0.2
+  const layer = (dy: number, op: number) =>
+    `<path d="M${m} ${m - d + dy} L${m + d * 1.7} ${m + dy} L${m} ${m + d + dy} L${m - d * 1.7} ${m + dy} Z" fill="none" stroke="${hex}" stroke-opacity="${op}" stroke-width="1.6" stroke-linejoin="round"/>`
+  const svg =
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">` +
+    `<rect x="0.5" y="0.5" width="${size - 1}" height="${size - 1}" rx="9" fill="${hex}" fill-opacity="0.14" stroke="${hex}" stroke-opacity="0.75"/>` +
+    layer(d * 0.9, 0.5) +
+    layer(0, 1) +
+    `</svg>`
+  return { svg, size }
+}
+
+/** The gate strip for the desktop: one small cell per recent check in its verdict colour, dim when made in a subagent. */
+export const checkStripSvg = (cells: { color: string; dim: boolean }[], width: number, height = 12) => {
+  const cell = 5
+  const gap = 2
+  const room = Math.max(1, Math.floor((width + gap) / (cell + gap)))
+  const shown = cells.slice(-room)
+  const w = Math.max(cell, shown.length * (cell + gap) - gap)
+  const rects = shown
+    .map((c, i) => `<rect x="${i * (cell + gap)}" y="0" width="${cell}" height="${height}" rx="1.5" fill="${hexOf(c.color)}" fill-opacity="${c.dim ? 0.45 : 1}"/>`)
+    .join('')
+  return { svg: `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${height}" viewBox="0 0 ${w} ${height}">${rects}</svg>`, width: w, height, count: shown.length }
+}
+
 /** A segmented bar for the desktop: rounded cells, `pct` of them lit in `color`, the rest faint. */
 export const segBarSvg = (pct: number, width: number, color: string, height = 10) => {
   const hex = hexOf(color)

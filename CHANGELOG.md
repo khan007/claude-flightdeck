@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.18
+
+- Desktop: header card with a logo badge and agents pill, a role line, a pill-style WORKING tag, the gate's recent checks as verdict-coloured cells on its title row, tinted state chips in the fleet, and an inset buffer for the log.
+
 ## 0.3.17
 
 - Desktop: each card has a faint tint of its own colour, and the context window and quotas are segmented SVG bars (amber past 80%).
