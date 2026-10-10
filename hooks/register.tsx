@@ -913,7 +913,14 @@ export const register: Register = (on, options) => {
               <Text dimColor>{`${s.total} CHECKS TOTAL`}</Text>
             </Box>
           )}
-          {isDesk ? (strip.length === 0 ? <Text color={C.faint}>no checks yet</Text> : null) : stripRow}
+          {isDesk ? (
+            strip.length === 0 ? <Text color={C.faint}>no checks yet</Text> : null
+          ) : (
+            <Box justifyContent="space-between">
+              {stripRow}
+              <Text color={C.dim}>{`${okN} OK${s.ask > 0 ? ` / ${s.ask} PENDING` : ''}`}</Text>
+            </Box>
+          )}
           {isDesk ? (
             <Box flexDirection="column">
               <Text dimColor>{`${s.total} CHECKS:`}</Text>
@@ -932,9 +939,6 @@ export const register: Register = (on, options) => {
             </Box>
           ) : (
             <Box flexDirection="column">
-              <Box justifyContent="flex-end">
-                <Text color={C.dim}>{`${okN} OK${s.ask > 0 ? ` / ${s.ask} PENDING` : ''}`}</Text>
-              </Box>
               <Box flexWrap="wrap" columnGap={1}>
                 {tallies.map(x => (
                   <Text color={x.n > 0 ? x.c : C.dim}>{`[${x.icon} ${x.n} ${x.label[0].toUpperCase()}${x.label.slice(1)}]`}</Text>

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.31
+
+- Terminal: the gate's check strip and its `N OK` summary share one row.
+
 ## 0.3.30
 
 - Terminal: panel titles are back inside their boxes (the border-line titles of 0.3.15 did not draw), the dotted connectors between panels are gone, and the gate always shows all four check pills.
