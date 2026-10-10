@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.27
+
+- Desktop: the bright accent is part of the card now: a line down the inside of its left border that curves along the top and bottom borders at its ends. The accent's SVG pieces carry a real `alt` (an SVG with an empty one may not draw).
+
 ## 0.3.26
 
 - Desktop: the accent bar lives in a full-width one-cell column, so its curved ends are no longer squeezed by a 2px parent.

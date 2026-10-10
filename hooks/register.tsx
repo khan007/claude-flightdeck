@@ -719,6 +719,7 @@ export const register: Register = (on, options) => {
       const colW3 = Math.floor((w - 4 - 2 * Math.max(0, statCols - 1)) / Math.max(1, statCols))
       return isDesk ? (
         <Box flexDirection="column" borderStyle="round" borderColor={dimEdge(C.main)} backgroundColor={tintOf(C.main)} paddingX={1} width={w}>
+          {accent(C.main)}
           <Box justifyContent="space-between">
             {chip(coreTitle, C.main)}
             {working}
@@ -909,6 +910,7 @@ export const register: Register = (on, options) => {
       })
       return (
         <Box flexDirection="column" borderStyle="round" borderColor={isDesk ? dimEdge(C.gate) : C.gate} backgroundColor={isDesk ? tintOf(C.gate) : undefined} paddingX={1} width={w}>
+          {isDesk ? accent(C.gate) : null}
           {isDesk ? (
             <Box justifyContent="space-between" columnGap={1}>
               {chip(`${num('gate')} // ${gateTitle}`, C.gate)}
@@ -1160,6 +1162,7 @@ export const register: Register = (on, options) => {
       )
       return (
         <Box flexDirection="column" borderStyle="round" borderColor={isDesk ? dimEdge('subtle') : C.faint} backgroundColor={isDesk ? tintOf('subtle', 0.06) : undefined} paddingX={1} width={w}>
+          {isDesk ? accent('subtle') : null}
           {isDesk ? (
             <Box justifyContent="space-between">
               <Box>
@@ -1200,6 +1203,7 @@ export const register: Register = (on, options) => {
       const stateColor = (st: string) => (st === 'busy' ? C.amber : st === 'waiting' ? C.cleared : C.gate)
       return (
         <Box flexDirection="column" borderStyle="round" borderColor={isDesk ? dimEdge(C.agent) : C.faint} backgroundColor={isDesk ? tintOf(C.agent) : undefined} paddingX={1} width={w}>
+          {isDesk ? accent(C.agent) : null}
           {isDesk ? (
             chip(`${num('fleet')} // FLEET [${fl.rows.length} ACTIVE]`, C.agent)
           ) : null}
@@ -1309,9 +1313,18 @@ export const register: Register = (on, options) => {
     const accentCap = (color: string, isTop: boolean) => {
       const { Svg } = $.ui.resolve(e)
       const c = barCapSvg(color, isTop)
-      return <Svg source={c.svg} alt="" width={c.width} height={c.height} />
+      return <Svg source={c.svg} alt="accent" width={c.width} height={c.height} />
     }
-    const barColor: Partial<Record<Panel, string>> = { main: C.main, gate: C.gate, fleet: C.agent, log: 'subtle' }
+    // Desktop: a bright line down the inside of the card's left border, curving along the top and bottom borders at its ends.
+    const accent = (color: string) => (
+      <Box position="absolute" top={0} bottom={0} left={0} width={1} flexDirection="column">
+        {accentCap(color, true)}
+        <Box flexGrow={1}>
+          <Box width="17%" backgroundColor={hexOf(color)} />
+        </Box>
+        {accentCap(color, false)}
+      </Box>
+    )
     const column = (ps: Panel[], w: number) => (
       <Box flexDirection="column" width={w}>
         {ps.map((p, i) => {
@@ -1323,20 +1336,7 @@ export const register: Register = (on, options) => {
           return (
             <Box flexDirection="column" marginTop={gap && (i === 0 || (i > 0 && (p === 'fleet' || p === 'log'))) ? 1 : 0}>
               {link}
-              {isDesk && barColor[p] ? (
-                <Box>
-                  <Box width={1} flexDirection="column">
-                    {accentCap(barColor[p] as string, true)}
-                    <Box flexGrow={1}>
-                      <Box width="17%" backgroundColor={hexOf(barColor[p] as string)} />
-                    </Box>
-                    {accentCap(barColor[p] as string, false)}
-                  </Box>
-                  {draw(p, w - 1)}
-                </Box>
-              ) : (
-                draw(p, w)
-              )}
+              {draw(p, w)}
               {p === 'agents' ? expandedPanel(w) : null}
             </Box>
           )
