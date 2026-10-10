@@ -1324,7 +1324,7 @@ export const register: Register = (on, options) => {
       <Box flexDirection="column" width={w}>
         {ps.map((p, i) => {
           return (
-            <Box flexDirection="column" marginTop={gap ? 1 : 0}>
+            <Box flexDirection="column" marginTop={gap ? (p === 'main' || p === 'gate' || p === 'fleet' || p === 'log' ? 2 : 1) : 0}>
               {draw(p, w)}
               {p === 'agents' ? expandedPanel(w) : null}
             </Box>

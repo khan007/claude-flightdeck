@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.33
+
+- Desktop: cards with a title tab get a two-row gap above them, so the tab no longer overlaps the card above.
+
 ## 0.3.32
 
 - Desktop: panel titles are tabs sitting on the top edge of their card, one row above it, instead of a chip inside the card. Every card keeps a free row above it for the tab.
