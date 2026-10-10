@@ -10,6 +10,10 @@ import {
   consultTimeline,
   describeInput,
   endConsult,
+  blocks,
+  chipSvg,
+  segBarSvg,
+  tintOf,
   fitLegend,
   gateSummary,
   lanes,
@@ -23,6 +27,8 @@ import {
   parseConfig,
   prettyModel,
   promptLine,
+  quotaName,
+  stateOf,
   handbackOf,
   adviceLine,
   receiptOf,
@@ -222,10 +228,11 @@ test('a fresh session draws on every surface and width, empty panels hidden', as
   for (const surface of ['terminal', 'desktop', 'vscode', 'mobile'] as const) {
     for (const cols of [40, 60, 86, 120]) {
       const ui = await $.ui.mount({ ...pane(cols), surface })
-      expect(await ui.find({ text: /· main$/ })).toBeDefined()
-      expect(await ui.find({ text: /session log/ })).toBeDefined()
+      // titles are text in the terminal and SVG chips (title as alt) elsewhere
+      expect(JSON.stringify(await ui.drawn())).toMatch(/AGENT CORE/)
+      expect(JSON.stringify(await ui.drawn())).toMatch(/LIVE BUFFER/)
       expect(await ui.find({ text: /agents ·/ })).toBeUndefined() // no subagents: no agents panel
-      expect(await ui.find({ text: /permissions/ })).toBeUndefined() // no checks yet: no gate panel
+      expect(await ui.find({ text: /\/\/ GATE/ })).toBeUndefined() // no checks yet: no gate panel
       await ui.unmount()
     }
   }
@@ -245,7 +252,7 @@ test('inline above the prompt, the pane is a summary of at most 8 rows', async (
     expect((root.children ?? []).filter(Boolean).length <= 8).toBe(true)
     expect(await ui.find({ text: /\+2 more agents/ })).toBeDefined()
     expect(await ui.find({ text: /1 allowed/ })).toBeDefined()
-    expect(await ui.find({ text: /session log/ })).toBeUndefined()
+    expect(await ui.find({ text: /LIVE BUFFER/ })).toBeUndefined()
     await ui.unmount()
   }
 })
@@ -265,7 +272,7 @@ test('/clear starts the pane fresh', async ($, on) => {
 test('colours come from the theme by default, raw hex only when asked', async ($, on) => {
   engine(on)
   const ui = await $.ui.mount({ ...pane(64), surface: 'terminal' })
-  const title = await ui.find({ text: /· main$/ })
+  const title = await ui.find({ type: 'Text', text: /AGENT CORE \[[^\]]*\]\s*$/ })
   expect(title?.props.color).toBe('claude')
   await ui.unmount()
 })
@@ -273,7 +280,7 @@ test('colours come from the theme by default, raw hex only when asked', async ($
 test('pastel keeps the fixed dark-terminal colours', { options: { palette: 'pastel' } }, async ($, on) => {
   engine(on)
   const ui = await $.ui.mount({ ...pane(64), surface: 'terminal' })
-  expect((await ui.find({ text: /· main$/ }))?.props.color).toBe('#7dd3fc')
+  expect((await ui.find({ type: 'Text', text: /AGENT CORE \[[^\]]*\]\s*$/ }))?.props.color).toBe('#7dd3fc')
   await ui.unmount()
 })
 
@@ -333,8 +340,8 @@ test('the gate strip fills from checks and a row opens its redacted drill-down',
   await $.tool.check({ tool: 'Read', input: { file_path: '/a/b.ts' }, tool_use_id: 'k1' })
   await $.tool.check({ tool: 'Bash', input: { command: 'curl -H "Authorization: Bearer abcdefgh12345" api' }, tool_use_id: 'k2' })
   const ui = await $.ui.mount({ ...pane(64), surface: 'terminal' })
-  expect(await ui.find({ text: /2 checks/ })).toBeDefined()
-  expect(await ui.find({ text: /1 pending/ })).toBeDefined()
+  expect(await ui.find({ text: /2 CHECKS/ })).toBeDefined()
+  expect(await ui.find({ text: /1 Pending/ })).toBeDefined()
   await ui.press({ key: 'gate-shell' })
   expect(await ui.find({ text: /Authorization: Bearer •••/ })).toBeDefined()
   expect(await ui.find({ text: /abcdefgh12345/ })).toBeUndefined()
@@ -349,7 +356,7 @@ test('config changes labels, hides panels and turns the moments off', { options:
   await $.agent.spawn(spawn('fable-advisor:fable-advisor', 'final review'))
   const ui = await $.ui.mount({ ...pane(64), surface: 'terminal' })
   expect(await ui.find({ text: /REVIEWER · advising/ })).toBeDefined()
-  expect(await ui.find({ text: /permissions/ })).toBeUndefined()
+  expect(await ui.find({ text: /\/\/ GATE/ })).toBeUndefined()
   expect(await ui.find({ text: /before a plan/ })).toBeUndefined()
   await ui.unmount()
 })
@@ -425,9 +432,74 @@ test('the fleet panel draws on every surface by default, even before data', asyn
   for (const surface of ['terminal', 'desktop', 'vscode', 'mobile'] as const) {
     for (const cols of [40, 86, 120]) {
       const ui = await $.ui.mount({ ...pane(cols), surface })
-      expect(await ui.find({ text: /FLEET/ })).toBeDefined()
+      expect(JSON.stringify(await ui.drawn())).toMatch(/FLEET/)
       expect(await ui.find({ text: /loading/ })).toBeDefined()
       await ui.unmount()
     }
   }
+})
+
+test('the gate reads as a compact tally on the desktop and as boxed pills in the terminal', async ($, on) => {
+  engine(on)
+  on('tool.check', (_$, e) => ({ decision: e.tool === 'Read' ? 'allow' : 'ask' }))
+  await $.tool.check({ tool: 'Read', input: { file_path: '/a/b.ts' }, tool_use_id: 'd1' })
+  await $.tool.check({ tool: 'Bash', input: { command: 'ls' }, tool_use_id: 'd2' })
+  const desk = await $.ui.mount({ ...pane(64), surface: 'desktop' })
+  expect(await desk.find({ text: /1 OK/ })).toBeDefined()
+  expect(await desk.find({ text: /2 CHECKS:/ })).toBeDefined()
+  expect(await desk.find({ text: /1 pending/ })).toBeDefined()
+  await desk.unmount()
+})
+
+test('bars, fleet states and quota names', () => {
+  expect(blocks(50, 4)).toEqual({ on: '██', off: '░░' })
+  expect(blocks(150, 3).off).toBe('')
+  expect(stateOf('busy')).toBe('BUSY')
+  expect(stateOf('waiting')).toBe('WAIT')
+  expect(stateOf('idle')).toBe('IDLE')
+  expect(quotaName('five_hour')).toBe('5h Quota')
+  expect(quotaName('seven_day')).toBe('7d Aggregate')
+  expect(quotaName('seven_day_opus')).toBe('7d opus')
+})
+
+test('the core shows context, cost and both quotas on every surface and width', async ($, on) => {
+  engine(on)
+  on('session.measure', () => ({ changed: ['context'] }) as never)
+  await $.session.measure({
+    context: { percent: 8, tokens: 76_000, window: 1_000_000 },
+    cost: { usd: 1.17 },
+    rateLimits: [
+      { kind: 'five_hour', percentUsed: 1 },
+      { kind: 'seven_day', percentUsed: 7 },
+    ],
+    changed: ['context'],
+  } as never)
+  for (const surface of ['terminal', 'desktop'] as const) {
+    for (const cols of [40, 64, 120]) {
+      const ui = await $.ui.mount({ ...pane(cols), surface })
+      expect(await ui.find({ text: /\[8%\]/ })).toBeDefined()
+      expect(await ui.find({ text: /\$1\.17/ })).toBeDefined()
+      expect(await ui.find({ text: /7%/ })).toBeDefined()
+      await ui.unmount()
+    }
+  }
+})
+
+test('a title chip is SVG in the panel colour, with the markup made safe', () => {
+  const c = chipSvg('01 // CORE <x>', 'claude')
+  expect(c.svg).toContain('#d97757')
+  expect(c.svg).not.toContain('<x>')
+  expect(chipSvg('A', '#112233').svg).toContain('#112233')
+  expect(c.width).toBeGreaterThan(chipSvg('A', 'claude').width)
+})
+
+test('desktop tint and segmented bar', () => {
+  expect(tintOf('claude')).toBe('#d9775714')
+  expect(tintOf('#112233', 1)).toBe('#112233ff')
+  const half = segBarSvg(50, 100, '#00ff00')
+  expect(half.lit).toBe(Math.round(half.n / 2))
+  expect(half.svg).toContain('#00ff00')
+  expect(segBarSvg(0, 100, 'claude').lit).toBe(0)
+  expect(segBarSvg(1, 100, 'claude').lit).toBe(1) // a sliver still shows
+  expect(segBarSvg(100, 100, 'claude').lit).toBe(segBarSvg(100, 100, 'claude').n)
 })

@@ -14,13 +14,16 @@ import {
   SCHEMA_VERSION,
   afterCall,
   applyStep,
+  blocks,
   bucketOf,
+  chipSvg,
+  segBarSvg,
+  tintOf,
   cardTitle,
   titleLines,
   consultTimeline,
   describeInput,
   endConsult,
-  fitLegend,
   fmtClock,
   fmtDuration,
   fmtTimer,
@@ -45,6 +48,7 @@ import {
   SVG_COLORS,
   parseConfig,
   prettyModel,
+  quotaName,
   promptLine,
   handbackOf,
   adviceLine,
@@ -53,6 +57,7 @@ import {
   settleCheck,
   shorten,
   startConsult,
+  stateOf,
   stepLoop,
 } from './core'
 import type { Config, Panel } from './core'
@@ -602,6 +607,12 @@ export const register: Register = (on, options) => {
     }
     const panels = cfg.panels.filter(p => !isEmpty[p])
     const decider = m.mode === 'auto' ? 'classifier' : 'you'
+    // Desktop (and the editor and phone) draw rounded cards; the terminal draws marked, boxed sections.
+    const isDesk = e.surface !== 'terminal'
+    // Panels with a heading are numbered in the order shown; the receipt and loops have none.
+    const titled = panels.filter(p => p !== 'receipt' && p !== 'loops')
+    const num = (p: Panel) => String(titled.indexOf(p) + 1).padStart(2, '0')
+    const mark = isDesk ? '' : '■ '
 
     // A connector between panels: animated while its flow is live, a dim line otherwise.
     const rail = (key: string, active: boolean, color: string, width: number, marks: number[] = [], isMerge = false) =>
@@ -627,54 +638,174 @@ export const register: Register = (on, options) => {
         <Text color={color}>{fmtTimer((endAt ?? now) - since)}</Text>
       )
 
+    // Desktop: a panel's title is an SVG chip (rounded, marked, in the panel's colour); the rest stays live text.
+    const chip = (title: string, color: string) => {
+      const { Svg } = $.ui.resolve(e)
+      const c = chipSvg(title, color)
+      return <Svg source={c.svg} alt={c.text} width={c.width} height={c.height} />
+    }
+
+    // Desktop: a segmented bar as SVG, `px` wide at most.
+    const segBar = (pct: number, px: number, color: string, label: string, height = 10) => {
+      const { Svg } = $.ui.resolve(e)
+      const b = segBarSvg(pct, px, color, height)
+      return <Svg source={b.svg} alt={`${label} ${Math.round(pct)}%`} width={b.width} height={b.height} />
+    }
+
+    // Terminal frames carry their title (and a status) on the top border, as a titled box does.
+    const onBorder = (left: unknown, right?: unknown) => [
+      <Box key="bl" position="absolute" top={-1} left={1}>
+        {left}
+      </Box>,
+      right ? (
+        <Box key="br" position="absolute" top={-1} right={1}>
+          {right}
+        </Box>
+      ) : null,
+    ]
+    const borderTitle = (text: string, color: string) => (
+      <Text color={color} bold wrap="truncate">{` ${text} `}</Text>
+    )
+
     // ---- main
     const effortN = { low: 1, medium: 2, high: 3, xhigh: 4, max: 4 }[m.effort] ?? 0
-    const ctxGauge = u.pct !== null ? gauge(u.pct, 10) : null
-    const mainPanel = (w: number) => (
-      <Box flexDirection="column" borderStyle="round" borderColor={C.main} paddingX={1} width={w}>
-        <Box justifyContent="space-between">
-          <Text color={C.main} bold>
-            {modelName} · main
-          </Text>
-          <Text color={m.isRunning ? C.main : C.dim}>{m.isRunning ? '● working' : '○ idle'}</Text>
-        </Box>
+    const effortName = { low: 'LOW', medium: 'MED', high: 'HIGH', xhigh: 'XHIGH', max: 'MAX' }[m.effort] ?? '—'
+    const ctxHot = u.pct !== null && u.pct >= 80
+    const coreTitle = `${mark}${num('main')} // AGENT CORE [${modelName.toUpperCase()}]`
+    const winK = `${Math.round(u.window / 1000)}k`
+    const ctxBar = (width: number) => {
+      const b = blocks(u.pct ?? 0, width)
+      return (
         <Text wrap="truncate">
-          <Text dimColor>effort </Text>
-          <Text color={C.main}>{'▮'.repeat(effortN) + '▯'.repeat(4 - effortN)} </Text>
-          <Text color={C.main} bold>
-            {m.effort || '—'}
-          </Text>
-          {m.mode ? <Text dimColor>{`   mode ${m.mode}`}</Text> : null}
-          <Text dimColor>{`   ${m.steps} req`}</Text>
+          <Text color={ctxHot ? C.warn : C.main}>{b.on}</Text>
+          <Text color={C.faint}>{b.off}</Text>
         </Text>
-        {ctxGauge ? (
-          <Text wrap="truncate">
-            <Text dimColor>ctx </Text>
-            <Text color={u.pct !== null && u.pct >= 80 ? C.warn : C.main}>{ctxGauge.on}</Text>
-            <Text color={C.faint}>{ctxGauge.off}</Text>
-            <Text bold>{` ${Math.round(u.pct ?? 0)}%`}</Text>
-            {u.tokens !== null ? <Text dimColor>{` ${kTokens(u.tokens)}/${kTokens(u.window)}`}</Text> : null}
-            {u.compactions > 0 ? <Text color={C.amber}>{`  ⟲${u.compactions}`}</Text> : null}
-          </Text>
-        ) : null}
-        {u.costUsd !== null || u.limits.length > 0 ? (
-          <Text wrap="truncate">
-            {u.costUsd !== null ? <Text color={C.text}>{`${fmtUsd(u.costUsd)}   `}</Text> : null}
-            {u.limits.slice(0, 2).map(l => {
-              const lg = gauge(l.pct, 5)
-              return (
-                <Text wrap="truncate">
-                  <Text dimColor>{`${limitLabel(l.kind)} `}</Text>
-                  <Text color={l.pct >= 80 ? C.warn : C.main}>{lg.on}</Text>
-                  <Text color={C.faint}>{lg.off}</Text>
-                  <Text dimColor>{` ${Math.round(l.pct)}%  `}</Text>
-                </Text>
-              )
-            })}
-          </Text>
-        ) : null}
+      )
+    }
+    // "Context Window: 76k / 1,000k" and the percentage, with the compactions so far.
+    const ctxHead = (
+      <Box justifyContent="space-between">
+        <Text wrap="truncate">
+          <Text dimColor>{isDesk ? 'Context Window: ' : `Context Window (${kTokens(u.window)} max): `}</Text>
+          {u.tokens !== null ? <Text bold>{kTokens(u.tokens)}</Text> : null}
+          <Text dimColor>{u.tokens !== null ? ` / ${winK}` : winK}</Text>
+          {u.compactions > 0 ? <Text color={C.amber}>{`  ⟲${u.compactions}`}</Text> : null}
+        </Text>
+        <Text color={ctxHot ? C.warn : isDesk ? C.amber : C.gate} bold>{`[${Math.round(u.pct ?? 0)}%]`}</Text>
       </Box>
     )
+    const working = (
+      <Text color={m.isRunning ? C.main : C.dim} bold={isDesk}>
+        {isDesk ? (m.isRunning ? '● WORKING' : '○ IDLE') : m.isRunning ? '● working' : '○ idle'}
+      </Text>
+    )
+    const tile = (width: number, label: string, body: unknown) => (
+      <Box flexDirection="column" borderStyle="round" borderColor={C.faint} paddingX={1} width={width}>
+        <Text dimColor wrap="truncate">{label}</Text>
+        {body}
+      </Box>
+    )
+    const mainPanel = (w: number) => {
+      const tileCount = u.costUsd !== null ? 3 : 2
+      const tileW = Math.floor((w - 4 - (tileCount - 1)) / tileCount)
+      const statCols = (u.costUsd !== null ? 1 : 0) + Math.min(2, u.limits.length)
+      const colW3 = Math.floor((w - 4 - 2 * Math.max(0, statCols - 1)) / Math.max(1, statCols))
+      return isDesk ? (
+        <Box flexDirection="column" borderStyle="round" borderColor={C.main} backgroundColor={tintOf(C.main)} paddingX={1} width={w}>
+          <Box justifyContent="space-between">
+            {chip(coreTitle, C.main)}
+            {working}
+          </Box>
+          {m.mode ? (
+            <Text wrap="truncate">
+              <Text dimColor>Mode: </Text>
+              <Text color={C.amber} bold>{m.mode.toUpperCase()}</Text>
+            </Text>
+          ) : null}
+          <Box columnGap={1}>
+            {tile(
+              tileW,
+              'EFFORT LEVEL',
+              <Text wrap="truncate">
+                <Text color={C.main}>{'▮'.repeat(effortN) + '▯'.repeat(4 - effortN)} </Text>
+                <Text color={C.main} bold>{effortName}</Text>
+              </Text>,
+            )}
+            {tile(tileW, 'REQUESTS', <Text bold>{`${m.steps} req`}</Text>)}
+            {u.costUsd !== null ? tile(tileW, 'SESSION COST', <Text color={C.gate} bold>{fmtUsd(u.costUsd)}</Text>) : null}
+          </Box>
+          {u.pct !== null ? ctxHead : null}
+          {u.pct !== null ? segBar(u.pct, Math.round((w - 4) * 7.2), ctxHot ? C.warn : C.main, 'Context window') : null}
+          {u.limits.length > 0 ? (
+            <Box justifyContent="space-between">
+              {u.limits.slice(0, 2).map(l => {
+                return (
+                  <Box columnGap={1}>
+                    <Text wrap="truncate">
+                      <Text dimColor>{`${quotaName(l.kind)}: `}</Text>
+                      <Text bold>{`${Math.round(l.pct)}%`}</Text>
+                    </Text>
+                    {segBar(l.pct, 64, l.pct >= 80 ? C.warn : C.main, quotaName(l.kind), 8)}
+                  </Box>
+                )
+              })}
+            </Box>
+          ) : null}
+        </Box>
+      ) : (
+        <Box flexDirection="column" borderStyle="round" borderColor={C.main} paddingX={1} width={w}>
+          {onBorder(borderTitle(coreTitle, C.main), working)}
+          <Box justifyContent="space-between">
+            <Text wrap="truncate">
+              <Text dimColor>Effort: </Text>
+              <Text color={C.main}>{'■'.repeat(effortN) + '□'.repeat(4 - effortN)}</Text>
+              <Text dimColor>{` (${effortName.toLowerCase()})`}</Text>
+            </Text>
+            {m.mode ? (
+              <Text wrap="truncate">
+                <Text dimColor>Mode: </Text>
+                <Text color={C.amber} bold>{`[${m.mode.toUpperCase()}]`}</Text>
+              </Text>
+            ) : null}
+            <Text wrap="truncate">
+              <Text dimColor>Req: </Text>
+              <Text bold>{`${m.steps}`}</Text>
+            </Text>
+          </Box>
+          {u.pct !== null ? ctxHead : null}
+          {u.pct !== null ? ctxBar(w - 4) : null}
+          {u.pct !== null ? (
+            <Box justifyContent="space-between">
+              <Text color={C.faint}>0k</Text>
+              <Text color={C.faint}>{winK}</Text>
+            </Box>
+          ) : null}
+          {u.costUsd !== null || u.limits.length > 0 ? (
+            <Box columnGap={2}>
+              {u.costUsd !== null ? (
+                <Box flexDirection="column" width={colW3}>
+                  <Text dimColor>SESSION COST</Text>
+                  <Text bold>{fmtUsd(u.costUsd)}</Text>
+                </Box>
+              ) : null}
+              {u.limits.slice(0, 2).map(l => {
+                const lg = gauge(l.pct, 5)
+                return (
+                  <Box flexDirection="column" width={colW3}>
+                    <Text dimColor wrap="truncate">{quotaName(l.kind).toUpperCase()}</Text>
+                    <Text wrap="truncate">
+                      <Text bold>{`${Math.round(l.pct)}% `}</Text>
+                      <Text color={l.pct >= 80 ? C.warn : C.main}>{lg.on}</Text>
+                      <Text color={C.faint}>{lg.off}</Text>
+                    </Text>
+                  </Box>
+                )
+              })}
+            </Box>
+          ) : null}
+        </Box>
+      )
+    }
 
     // ---- architect
     const lastConsult = a.consults[a.consults.length - 1]
@@ -684,7 +815,7 @@ export const register: Register = (on, options) => {
         <Box flexDirection="column" borderStyle="round" borderColor={C.arch} paddingX={1} width={w}>
           <Box justifyContent="space-between">
             <Text color={C.arch} bold>
-              {cfg.architectLabel} · {advising ? 'advising' : 'on call'}
+              {`${mark}${num('architect')} // `}{cfg.architectLabel} · {advising ? 'advising' : 'on call'}
             </Text>
             <Text>
               <Text dimColor>consults </Text>
@@ -729,50 +860,86 @@ export const register: Register = (on, options) => {
     const s = gateSummary(g)
     const verdictColor = (c: Check) =>
       c.verdict === 'rule' ? C.gate : c.verdict === 'cleared' ? C.cleared : c.verdict === 'ask' ? C.amber : C.warn
+    const gateTitle = cfg.gateLabel === 'GATE' ? 'GATEWAY' : cfg.gateLabel
     const gatePanel = (w: number) => {
       const strip = g.recent.slice(-Math.max(8, w - 4))
       const open = v.gateOpen
-      return (
-        <Box flexDirection="column" borderStyle="round" borderColor={C.gate} paddingX={1} width={w}>
-          <Box justifyContent="space-between">
-            <Text color={C.gate} bold>
-              {cfg.gateLabel} · permissions
+      const okN = s.rule + s.cleared
+      const tallies = [
+        { n: s.rule, label: 'allowed', icon: '✔', c: C.gate },
+        { n: s.cleared, label: decider, icon: '⚙', c: C.cleared },
+        { n: s.ask, label: 'pending', icon: '⚠', c: C.amber },
+        { n: s.deny, label: 'denied', icon: '×', c: C.warn },
+      ]
+      const stripRow = (
+        <Text wrap="truncate">
+          {strip.length === 0 ? <Text color={C.faint}>no checks yet</Text> : null}
+          {strip.map(c => (
+            <Text color={verdictColor(c)} dimColor={c.inSubagent}>
+              {c.verdict === 'deny' ? 'x' : '|'}
             </Text>
-            <Text dimColor>{`${s.total} checks`}</Text>
-          </Box>
-          <Text wrap="truncate">
-            {strip.length === 0 ? <Text color={C.faint}>no checks yet</Text> : null}
-            {strip.map(c => (
-              <Text color={verdictColor(c)} dimColor={c.inSubagent}>
-                {c.verdict === 'deny' ? 'x' : '|'}
+          ))}
+        </Text>
+      )
+      const buckets = (['file', 'shell', 'other'] as const).map((b: Bucket) => {
+        const tl = g.totals[b]
+        const n = tl.rule + tl.ask + tl.cleared + tl.deny
+        return (
+          <Button
+            key={`gate-${b}`}
+            plain
+            hotkey={b[0]}
+            label={`${b} ${n}${open === b ? ' ▾' : ''}`}
+            dimColor={n === 0}
+            onPress={() => update($, view, x => ({ ...normalize(DEFAULT_VIEW, x), gateOpen: normalize(DEFAULT_VIEW, x).gateOpen === b ? null : b }))}
+          />
+        )
+      })
+      return (
+        <Box flexDirection="column" borderStyle="round" borderColor={C.gate} backgroundColor={isDesk ? tintOf(C.gate) : undefined} paddingX={1} width={w}>
+          {isDesk ? (
+            <Box justifyContent="space-between">
+              {chip(`${num('gate')} // ${gateTitle}`, C.gate)}
+              <Text wrap="truncate">
+                <Text color={C.gate}>{`${okN} OK`}</Text>
+                {s.ask > 0 ? <Text color={C.amber}>{` · ${s.ask} PEND`}</Text> : null}
+                {s.deny > 0 ? <Text color={C.warn}>{` · ${s.deny} DENIED`}</Text> : null}
               </Text>
-            ))}
-          </Text>
-          <Text wrap="truncate">
-            <Text color={C.gate}>■</Text>
-            <Text dimColor>{` ${s.rule} allowed  `}</Text>
-            <Text color={C.cleared}>■</Text>
-            <Text dimColor>{` ${s.cleared} ${decider}  `}</Text>
-            {s.ask > 0 ? <Text color={C.amber}>{`■ ${s.ask} pending  `}</Text> : null}
-            <Text color={s.deny > 0 ? C.warn : C.dim}>{`✗ ${s.deny} denied`}</Text>
-            {w >= 80 && g.recent.some(c => c.inSubagent) ? <Text color={C.faint}>{'  dim: in subagents'}</Text> : null}
-          </Text>
-          <Box columnGap={2}>
-            {(['file', 'shell', 'other'] as const).map((b: Bucket) => {
-              const tl = g.totals[b]
-              const n = tl.rule + tl.ask + tl.cleared + tl.deny
-              return (
-                <Button
-                  key={`gate-${b}`}
-                  plain
-                  hotkey={b[0]}
-                  label={`${b} ${n}${open === b ? ' ▾' : ''}`}
-                  dimColor={n === 0}
-                  onPress={() => update($, view, x => ({ ...normalize(DEFAULT_VIEW, x), gateOpen: normalize(DEFAULT_VIEW, x).gateOpen === b ? null : b }))}
-                />
-              )
-            })}
-          </Box>
+            </Box>
+          ) : null}
+          {isDesk ? null : onBorder(borderTitle(`${mark}${num('gate')} // ${gateTitle} PERMISSIONS`, C.gate), <Text dimColor>{` ${s.total} CHECKS TOTAL `}</Text>)}
+          {stripRow}
+          {isDesk ? (
+            <Box flexDirection="column">
+              <Text dimColor>{`${s.total} CHECKS:`}</Text>
+              <Text wrap="truncate">
+                {tallies.every(x => x.n === 0) ? <Text color={C.faint}>none yet</Text> : null}
+                {tallies
+                  .filter(x => x.n > 0)
+                  .map((x, i) => (
+                    <Text>
+                      {i > 0 ? <Text dimColor> · </Text> : null}
+                      <Text color={x.c} bold>{`${x.n} ${x.label}`}</Text>
+                    </Text>
+                  ))}
+              </Text>
+              <Box columnGap={2}>{buckets}</Box>
+            </Box>
+          ) : (
+            <Box flexDirection="column">
+              {w >= 80 ? (
+                <Box justifyContent="flex-end">
+                  <Text color={C.dim}>{`${okN} OK${s.ask > 0 ? ` / ${s.ask} PENDING` : ''}`}</Text>
+                </Box>
+              ) : null}
+              <Box flexWrap="wrap" columnGap={1}>
+                {(w >= 60 || tallies.every(x => x.n === 0) ? tallies : tallies.filter(x => x.n > 0)).map(x => (
+                  <Text color={x.n > 0 ? x.c : C.dim}>{`[${x.icon} ${x.n} ${x.label[0].toUpperCase()}${x.label.slice(1)}]`}</Text>
+                ))}
+              </Box>
+              <Box justifyContent="space-between">{buckets}</Box>
+            </Box>
+          )}
           {open
             ? g.recent
                 .filter(c => c.bucket === open)
@@ -801,7 +968,7 @@ export const register: Register = (on, options) => {
       const useLanes = cards.length > fit
       const header = (
         <Box justifyContent="space-between" width={w}>
-          <Text bold>{`agents · ${running.length} running · ${cards.length} total`}</Text>
+          <Text bold>{`${mark}${num('agents')} // AGENTS · ${running.length} running · ${cards.length} total`}</Text>
           {cards.length > 0 ? <Text color={C.faint}>1-{Math.min(cards.length, useLanes ? 6 : fit)} expand</Text> : null}
         </Box>
       )
@@ -955,85 +1122,155 @@ export const register: Register = (on, options) => {
     const shownLines = (viewed ? lines.filter(l => l.agentId === viewed) : lines).slice(-nLog)
     const colorOf = (l: LogLine) =>
       l.kind === 'error' ? C.warn : l.kind === 'consult' ? C.arch : l.who === 'main' ? C.main : l.who === 'gate' ? C.gate : l.who === 'you' ? C.text : C.agent
-    const logPanel = (w: number) => (
-      <Box flexDirection="column" borderStyle="round" borderColor={C.faint} paddingX={1} width={w}>
-        <Text dimColor>{viewed ? 'session log · this agent' : 'session log'}</Text>
-        {shownLines.length === 0 ? <Text color={C.faint}>nothing yet</Text> : null}
-        {shownLines.map(l => (
-          <Box>
-            <Box width={9} flexShrink={0}>
-              <Text color={C.faint}>{fmtClock(l.at)}</Text>
-            </Box>
-            <Box width={13} flexShrink={0}>
-              <Text color={colorOf(l)} bold wrap="truncate">
-                {l.who}
+    const logPanel = (w: number) => {
+      const live = m.isRunning && t.startedAt > 0
+      const lines = (
+        <Box flexDirection="column" borderStyle={isDesk ? 'round' : undefined} borderColor={C.faint} paddingX={isDesk ? 1 : 0}>
+          {shownLines.length === 0 ? <Text color={C.faint}>nothing yet</Text> : null}
+          {shownLines.map(l => (
+            <Box>
+              <Box width={9} flexShrink={0}>
+                <Text color={C.faint}>{fmtClock(l.at)}</Text>
+              </Box>
+              <Box width={13} flexShrink={0}>
+                <Text color={colorOf(l)} bold wrap="truncate">
+                  {`[${shorten(l.who, 10)}]`}
+                </Text>
+              </Box>
+              <Text color={l.kind === 'error' ? C.warn : C.text} wrap="truncate">
+                {l.text}
               </Text>
             </Box>
-            <Text color={l.kind === 'error' ? C.warn : C.text} wrap="truncate">
-              {l.text}
-            </Text>
-          </Box>
-        ))}
-      </Box>
-    )
+          ))}
+          {s.ask > 0 ? <Text color={C.amber}>{'❯ awaiting your permission'}</Text> : null}
+        </Box>
+      )
+      return (
+        <Box flexDirection="column" borderStyle="round" borderColor={C.faint} backgroundColor={isDesk ? tintOf('subtle', 0.06) : undefined} paddingX={1} width={w}>
+          {isDesk ? (
+            <Box justifyContent="space-between">
+              <Box>
+                {chip(`${num('log')} // LIVE BUFFER${viewed ? ' · THIS AGENT' : ''}`, C.main)}
+                {live ? <Text color={C.main} bold>{' [TURN '}</Text> : null}
+                {live ? clock('turn-log-clock', t.startedAt, null, C.main) : null}
+                {live ? <Text color={C.main} bold>{']'}</Text> : null}
+              </Box>
+              <Text color={live ? C.cleared : C.dim}>{live ? '● STREAM' : '○ IDLE'}</Text>
+            </Box>
+          ) : null}
+          {isDesk
+            ? null
+            : onBorder(
+                <Box>
+                  <Text color={C.main} bold wrap="truncate">{` ${mark}${num('log')} // LIVE BUFFER${viewed ? ' · THIS AGENT' : ''}`}</Text>
+                  {live ? <Text color={C.main} bold>{' [TURN '}</Text> : null}
+                  {live ? clock('turn-log-clock', t.startedAt, null, C.main) : null}
+                  {live ? <Text color={C.main} bold>{'] '}</Text> : <Text> </Text>}
+                </Box>,
+                <Text color={live ? C.cleared : C.dim}>{live ? ' ● STREAM ' : ' ○ IDLE '}</Text>,
+              )}
+          {lines}
+        </Box>
+      )
+    }
 
     // ---- fleet: running sessions with their estimated cost (from the user's fleet script)
     const kindColors = [C.agent, C.main, C.gate] // run, today, all
     const fleetTotal = fl.rows.reduce((sum, x) => sum + x.costUsd, 0)
-    const fleetPanel = (w: number) => (
-      <Box flexDirection="column" borderStyle="round" borderColor={C.faint} paddingX={1} width={w}>
-        <Box justifyContent="space-between">
-          <Text color={C.main} bold>
-            {`FLEET · ${fl.rows.length} running`}
-          </Text>
-          <Text dimColor>{`now ${fmtUsd(fleetTotal)}`}</Text>
-        </Box>
-        {fl.todayUsd !== null ? (
-          <Text wrap="truncate">
-            <Text dimColor>{`today ${fmtUsd(fl.todayUsd)} · per session: `}</Text>
-            <Text color={kindColors[0]}>run</Text>
-            <Text dimColor> / </Text>
-            <Text color={kindColors[1]}>today</Text>
-            <Text dimColor> / </Text>
-            <Text color={kindColors[2]}>all</Text>
-          </Text>
-        ) : null}
-        {fl.rows.length === 0 && !fl.error ? <Text dimColor>loading…</Text> : null}
-        {fl.rows.slice(0, 6).map(x => {
-          // run / today / all in their own colours; equal neighbours merge into one number in the wider kind's colour
-          const groups: { v: string; c: string }[] = []
-          ;[x.runCostUsd, x.todayCostUsd, x.costUsd].forEach((n, i) => {
-            const v = n.toFixed(2)
-            const last = groups[groups.length - 1]
-            if (last && last.v === v) last.c = kindColors[i]
-            else groups.push({ v, c: kindColors[i] })
-          })
-          const cost = ` · ${groups.map(g => g.v).join(' / ')}${x.costIncomplete ? '+' : ''}`
-          // inside the frame: 2 border + 2 padding + 2 for the dot, then the cost stays whole
-          const room = Math.max(8, w - 6 - cost.length)
-          return (
-            <Box>
-              <Text color={x.status === 'busy' ? C.gate : C.dim}>{x.status === 'busy' ? '● ' : '○ '}</Text>
-              {x.entrypoint === 'claude-desktop' && x.hostId ? (
-                <Button key={`fleet-${x.id}`} plain label={shorten(x.name, room)} onPress={() => openSession($, x.hostId)} />
-              ) : (
-                <Text bold={x.status === 'busy'}>{shorten(x.name, room)}</Text>
-              )}
-              <Text dimColor> · </Text>
-              {groups.map((g, i) => (
-                <Text>
-                  {i > 0 ? <Text dimColor> / </Text> : null}
-                  <Text color={g.c}>{g.v}</Text>
-                </Text>
-              ))}
-              {x.costIncomplete ? <Text dimColor>+</Text> : null}
+    const fleetPanel = (w: number) => {
+      const showIdle = w >= 56
+      const costW = w >= 64 ? 24 : 20
+      const idleW = showIdle ? 8 : 0
+      const stateW = 7
+      // inside the frame: 2 border + 2 padding, then the dot, the costs, the idle time and the state chip
+      const room = Math.max(6, w - 4 - 2 - costW - idleW - stateW)
+      const stateColor = (st: string) => (st === 'busy' ? C.amber : st === 'waiting' ? C.cleared : C.gate)
+      return (
+        <Box flexDirection="column" borderStyle="round" borderColor={C.faint} backgroundColor={isDesk ? tintOf(C.agent) : undefined} paddingX={1} width={w}>
+          {isDesk ? (
+            chip(`${num('fleet')} // FLEET [${fl.rows.length} ACTIVE]`, C.agent)
+          ) : null}
+          {isDesk ? null : onBorder(borderTitle(`${mark}${num('fleet')} // FLEET [${fl.rows.length} ACTIVE]`, C.main))}
+          <Box>
+            <Box flexGrow={1}>
+              <Text dimColor>{'  WORKER / ID'}</Text>
             </Box>
-          )
-        })}
-        {fl.rows.length > 6 ? <Text dimColor>{`+${fl.rows.length - 6} more`}</Text> : null}
-        {fl.error ? <Text color={C.warn}>{`refresh failed: ${fl.error}`}</Text> : null}
-      </Box>
-    )
+            <Box width={costW} justifyContent="flex-end">
+              <Text color={kindColors[0]}>RUN</Text>
+              <Text dimColor> / </Text>
+              <Text color={kindColors[1]}>TODAY</Text>
+              <Text dimColor> / </Text>
+              <Text color={kindColors[2]}>ALL</Text>
+            </Box>
+            {showIdle ? (
+              <Box width={idleW} justifyContent="flex-end">
+                <Text dimColor>IDLE</Text>
+              </Box>
+            ) : null}
+            <Box width={stateW} justifyContent="flex-end">
+              <Text dimColor>STATE</Text>
+            </Box>
+          </Box>
+          {fl.rows.length === 0 && !fl.error ? <Text dimColor>loading…</Text> : null}
+          {fl.rows.slice(0, 6).map(x => {
+            // run / today / all in their own colours; equal neighbours merge into one number in the wider kind's colour
+            const groups: { v: string; c: string }[] = []
+            ;[x.runCostUsd, x.todayCostUsd, x.costUsd].forEach((n, i) => {
+              const v = `${i === 0 ? '$' : ''}${n.toFixed(2)}`
+              const last = groups[groups.length - 1]
+              if (last && last.v.replace('$', '') === v.replace('$', '')) last.c = kindColors[i]
+              else groups.push({ v, c: kindColors[i] })
+            })
+            const st = stateOf(x.status)
+            return (
+              <Box>
+                <Box flexGrow={1}>
+                  <Text color={stateColor(x.status)}>{x.status === 'busy' ? '● ' : '○ '}</Text>
+                  {x.entrypoint === 'claude-desktop' && x.hostId ? (
+                    <Button key={`fleet-${x.id}`} plain label={shorten(x.name, room)} onPress={() => openSession($, x.hostId)} />
+                  ) : (
+                    <Text bold={x.status === 'busy'} wrap="truncate">{shorten(x.name, room)}</Text>
+                  )}
+                </Box>
+                <Box width={costW} justifyContent="flex-end">
+                  {groups.map((g, i) => (
+                    <Text>
+                      {i > 0 ? <Text dimColor> / </Text> : null}
+                      <Text color={g.c}>{g.v}</Text>
+                    </Text>
+                  ))}
+                  {x.costIncomplete ? <Text dimColor>+</Text> : null}
+                </Box>
+                {showIdle ? (
+                  <Box width={idleW} justifyContent="flex-end">
+                    <Text dimColor>{fmtDuration(x.idleMs)}</Text>
+                  </Box>
+                ) : null}
+                <Box width={stateW} justifyContent="flex-end">
+                  {isDesk ? (
+                    <Text color={stateColor(x.status)} bold>{` ${st} `}</Text>
+                  ) : (
+                    <Text color={stateColor(x.status)}>{`[${st}]`}</Text>
+                  )}
+                </Box>
+              </Box>
+            )
+          })}
+          {fl.rows.length > 6 ? <Text dimColor>{`+${fl.rows.length - 6} more`}</Text> : null}
+          {fl.error ? <Text color={C.warn}>{`refresh failed: ${fl.error}`}</Text> : null}
+          <Box justifyContent="space-between">
+            <Text wrap="truncate">
+              <Text dimColor>Today Total: </Text>
+              <Text color={C.gate} bold>{fl.todayUsd !== null ? fmtUsd(fl.todayUsd) : '—'}</Text>
+            </Text>
+            <Text wrap="truncate">
+              <Text dimColor>Sessions total: </Text>
+              <Text bold>{fmtUsd(fleetTotal)}</Text>
+            </Text>
+          </Box>
+        </Box>
+      )
+    }
 
     const draw = (p: Panel, w: number) =>
       p === 'main'
@@ -1163,16 +1400,6 @@ export const register: Register = (on, options) => {
       )
     }
 
-    const legend = fitLegend(
-      [
-        { label: 'main', color: C.main },
-        { label: 'agents', color: C.agent },
-        { label: cfg.gateLabel.toLowerCase(), color: C.gate },
-        ...(showArchitect ? [{ label: cfg.architectLabel.toLowerCase(), color: C.arch }] : []),
-      ],
-      W,
-    )
-
     const body = isWide ? (
       <Box flexDirection="column">
         <Box columnGap={2}>
@@ -1185,34 +1412,27 @@ export const register: Register = (on, options) => {
       column(panels, W)
     )
 
+    const heading = (
+      <Box justifyContent="space-between" borderStyle={isDesk ? 'round' : undefined} borderColor={C.faint} paddingX={isDesk ? 1 : 0} width={W}>
+        <Text wrap="truncate">
+          <Text color={C.main} bold>FLIGHTDECK</Text>
+          {ver ? <Text dimColor>{` v${ver}`}</Text> : null}
+          <Text color={C.dim}>{' :: '}</Text>
+          <Text color={C.main} bold>{modelName.toUpperCase()}</Text>
+          <Text color={m.isRunning ? C.gate : C.dim} bold>{m.isRunning ? ' RUNNING' : ' IDLE'}</Text>
+          {showArchitect ? <Text color={C.dim}>{' · '}</Text> : null}
+          {showArchitect ? <Text color={C.arch}>{cfg.architectLabel}</Text> : null}
+          {showArchitect ? <Text>{advising ? ' ADVISING' : ' ON CALL'}</Text> : null}
+        </Text>
+        {cards.length > 0 ? <Text color={C.agent}>{`agents (${cards.length})`}</Text> : null}
+      </Box>
+    )
+
     return (
       <Box flexDirection="column" width={W}>
-        <Box justifyContent="center">
-          <Text bold wrap="truncate">
-            <Text>FLIGHTDECK</Text>
-            <Text color={C.dim}> · </Text>
-            <Text color={C.main}>{modelName.toUpperCase()}</Text>
-            <Text>{m.isRunning ? ' WORKS' : ' IDLE'}</Text>
-            {showArchitect ? <Text color={C.dim}> · </Text> : null}
-            {showArchitect ? <Text color={C.arch}>{cfg.architectLabel}</Text> : null}
-            {showArchitect ? <Text>{advising ? ' ADVISING' : ' ON CALL'}</Text> : null}
-          </Text>
-        </Box>
-        <Box justifyContent="center" columnGap={2}>
-          {legend.map(l => (
-            <Text>
-              <Text color={l.color}>■</Text>
-              <Text dimColor>{` ${l.label}`}</Text>
-            </Text>
-          ))}
-        </Box>
+        {heading}
         {body}
         {svgLanes}
-        {ver ? (
-          <Box justifyContent="flex-end">
-            <Text dimColor>{`v${ver}`}</Text>
-          </Box>
-        ) : null}
       </Box>
     )
   })

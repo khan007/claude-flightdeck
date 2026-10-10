@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.3.17
+
+- Desktop: each card has a faint tint of its own colour, and the context window and quotas are segmented SVG bars (amber past 80%).
+
+## 0.3.16
+
+- Desktop: each panel's title is an SVG chip (rounded, with a marker, in the panel's colour). Buttons, fleet rows and numbers stay live text.
+
+## 0.3.15
+
+- Terminal panels carry their title on the top border. The gate buttons no longer repeat their hotkey (`f: f:file`), and at narrow widths the gate shows only non-zero tallies.
+
+## 0.3.14
+
+- New look. Desktop: rounded cards, with effort, requests and cost as tiles, a context bar and the quotas under it. Terminal: marked, boxed sections with a context ruler, three stat columns and check pills. Panels are numbered (`01 // AGENT CORE`, `02 // GATEWAY`, `03 // FLEET`, `04 // LIVE BUFFER`).
+- Fleet table gains IDLE and STATE columns; the session log is now the live buffer with the turn clock. Still real data only: no latency, network or burn-rate figures.
+
 ## 0.3.2
 
 - A background architect's advice is read from its `SubagentHandback` tool call, where the report actually arrives, with the hand-back text as a fallback. Bold markers no longer leak into the advice line.

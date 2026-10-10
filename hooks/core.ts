@@ -245,6 +245,66 @@ export const gauge = (pct: number, width: number) => {
   return { on: '▰'.repeat(full), off: '▱'.repeat(width - full) }
 }
 
+// SVG takes hex, not theme names: the default palette's names mapped to their usual dark-theme colours.
+const THEME_HEX: Record<string, string> = {
+  claude: '#d97757',
+  success: '#4ade80',
+  suggestion: '#60a5fa',
+  merged: '#a78bfa',
+  warning: '#f59e0b',
+  error: '#ef4444',
+  permission: '#818cf8',
+  subtle: '#94a3b8',
+  inactive: '#94a3b8',
+}
+export const hexOf = (c: string) => (c.startsWith('#') ? c : (THEME_HEX[c] ?? '#94a3b8'))
+
+/** A panel's card tint: its colour at a low alpha, as an 8-digit hex, so it sits on any pane background. */
+export const tintOf = (c: string, alpha = 0.08) => `${hexOf(c)}${Math.round(alpha * 255).toString(16).padStart(2, '0')}`
+
+/** A segmented bar for the desktop: rounded cells, `pct` of them lit in `color`, the rest faint. */
+export const segBarSvg = (pct: number, width: number, color: string, height = 10) => {
+  const hex = hexOf(color)
+  const cell = 7
+  const gap = 2
+  const n = Math.max(4, Math.floor((width + gap) / (cell + gap)))
+  const lit = pct > 0 ? Math.max(1, Math.min(n, Math.round((pct / 100) * n))) : 0
+  const w = n * (cell + gap) - gap
+  const rects = Array.from({ length: n }, (_, i) =>
+    `<rect x="${i * (cell + gap)}" y="0" width="${cell}" height="${height}" rx="2" fill="${i < lit ? hex : '#94a3b8'}" fill-opacity="${i < lit ? 1 : 0.22}"/>`,
+  ).join('')
+  return { svg: `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${height}" viewBox="0 0 ${w} ${height}">${rects}</svg>`, width: w, height, lit, n }
+}
+
+/** A panel's title as a rounded chip with a square marker, for the desktop: SVG markup and its pixel size. */
+export const chipSvg = (title: string, color: string, height = 22) => {
+  const hex = hexOf(color)
+  const text = title.replace(/[<>&"']/g, '')
+  const width = Math.ceil(text.length * 7.3 + 34)
+  const mid = height / 2
+  const svg =
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">` +
+    `<rect x="0.5" y="0.5" width="${width - 1}" height="${height - 1}" rx="6" fill="${hex}" fill-opacity="0.14" stroke="${hex}" stroke-opacity="0.75"/>` +
+    `<rect x="9" y="${mid - 3}" width="6" height="6" rx="1" fill="${hex}"/>` +
+    `<text x="22" y="${mid + 4}" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="12" font-weight="600" fill="${hex}">${text}</text></svg>`
+  return { svg, width, height, text }
+}
+
+/** A solid bar of `width` cells: █ filled, ░ empty. */
+export const blocks = (pct: number, width: number) => {
+  const full = Math.max(0, Math.min(width, Math.round((pct / 100) * width)))
+  return { on: '█'.repeat(full), off: '░'.repeat(width - full) }
+}
+
+/** A fleet row's status as a four-letter chip: busy, waiting or idle. */
+export const stateOf = (status: string) => (status === 'busy' ? 'BUSY' : status === 'waiting' ? 'WAIT' : status === 'idle' ? 'IDLE' : status.slice(0, 4).toUpperCase() || '?')
+
+/** A rate-limit window as the pane names it: `5h Quota`, `7d Aggregate`, anything else as limitLabel gives it. */
+export const quotaName = (kind: string) => {
+  const l = limitLabel(kind)
+  return l === '5h' ? '5h Quota' : l === '7d' ? '7d Aggregate' : l
+}
+
 /** A rate-limit window's short name: `five_hour` → `5h`, `seven_day_opus` → `7d opus`. */
 export const limitLabel = (kind: string) =>
   kind
