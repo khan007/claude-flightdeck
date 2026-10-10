@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.19
+
+- Desktop: card borders are dim, with a bright strip of the panel's colour down the left edge.
+
 ## 0.3.18
 
 - Desktop: header card with a logo badge and agents pill, a role line, a pill-style WORKING tag, the gate's recent checks as verdict-coloured cells on its title row, tinted state chips in the fleet, and an inset buffer for the log.

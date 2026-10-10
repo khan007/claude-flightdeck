@@ -18,6 +18,7 @@ import {
   bucketOf,
   checkStripSvg,
   chipSvg,
+  hexOf,
   logoSvg,
   segBarSvg,
   tintOf,
@@ -654,6 +655,10 @@ export const register: Register = (on, options) => {
       return <Svg source={b.svg} alt={`${label} ${Math.round(pct)}%`} width={b.width} height={b.height} />
     }
 
+    // Desktop: the card's border is dim and a bright strip lies over its left edge, between the corners.
+    const accent = (color: string) => <Box position="absolute" top={0} bottom={0} left={-1} width={1} backgroundColor={hexOf(color)} />
+    const dimEdge = (color: string) => tintOf(color, 0.35)
+
     // Terminal frames carry their title (and a status) on the top border, as a titled box does.
     const onBorder = (left: unknown, right?: unknown) => [
       <Box key="bl" position="absolute" top={-1} left={1}>
@@ -713,7 +718,8 @@ export const register: Register = (on, options) => {
       const statCols = (u.costUsd !== null ? 1 : 0) + Math.min(2, u.limits.length)
       const colW3 = Math.floor((w - 4 - 2 * Math.max(0, statCols - 1)) / Math.max(1, statCols))
       return isDesk ? (
-        <Box flexDirection="column" borderStyle="round" borderColor={C.main} backgroundColor={tintOf(C.main)} paddingX={1} width={w}>
+        <Box flexDirection="column" borderStyle="round" borderColor={dimEdge(C.main)} backgroundColor={tintOf(C.main)} paddingX={1} width={w}>
+          {accent(C.main)}
           <Box justifyContent="space-between">
             {chip(coreTitle, C.main)}
             {working}
@@ -903,7 +909,8 @@ export const register: Register = (on, options) => {
         )
       })
       return (
-        <Box flexDirection="column" borderStyle="round" borderColor={C.gate} backgroundColor={isDesk ? tintOf(C.gate) : undefined} paddingX={1} width={w}>
+        <Box flexDirection="column" borderStyle="round" borderColor={isDesk ? dimEdge(C.gate) : C.gate} backgroundColor={isDesk ? tintOf(C.gate) : undefined} paddingX={1} width={w}>
+          {isDesk ? accent(C.gate) : null}
           {isDesk ? (
             <Box justifyContent="space-between" columnGap={1}>
               {chip(`${num('gate')} // ${gateTitle}`, C.gate)}
@@ -1154,7 +1161,8 @@ export const register: Register = (on, options) => {
         </Box>
       )
       return (
-        <Box flexDirection="column" borderStyle="round" borderColor={C.faint} backgroundColor={isDesk ? tintOf('subtle', 0.06) : undefined} paddingX={1} width={w}>
+        <Box flexDirection="column" borderStyle="round" borderColor={isDesk ? dimEdge('subtle') : C.faint} backgroundColor={isDesk ? tintOf('subtle', 0.06) : undefined} paddingX={1} width={w}>
+          {isDesk ? accent(C.main) : null}
           {isDesk ? (
             <Box justifyContent="space-between">
               <Box>
@@ -1194,7 +1202,8 @@ export const register: Register = (on, options) => {
       const room = Math.max(6, w - 4 - 2 - costW - idleW - stateW)
       const stateColor = (st: string) => (st === 'busy' ? C.amber : st === 'waiting' ? C.cleared : C.gate)
       return (
-        <Box flexDirection="column" borderStyle="round" borderColor={C.faint} backgroundColor={isDesk ? tintOf(C.agent) : undefined} paddingX={1} width={w}>
+        <Box flexDirection="column" borderStyle="round" borderColor={isDesk ? dimEdge(C.agent) : C.faint} backgroundColor={isDesk ? tintOf(C.agent) : undefined} paddingX={1} width={w}>
+          {isDesk ? accent(C.agent) : null}
           {isDesk ? (
             chip(`${num('fleet')} // FLEET [${fl.rows.length} ACTIVE]`, C.agent)
           ) : null}
