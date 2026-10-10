@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.23
+
+- Desktop: the accent bar is about 2px (17% of a one-cell column) instead of 8px.
+
 ## 0.3.22
 
 - Desktop: each card has a bright bar of its colour beside it (about 1% of the width) and a darker border; a gap now separates the header from the first card. Replaces the overlaid left line, which did not render.

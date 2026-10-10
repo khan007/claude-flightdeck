@@ -1318,7 +1318,9 @@ export const register: Register = (on, options) => {
               {link}
               {isDesk && barColor[p] ? (
                 <Box>
-                  <Box width="1%" backgroundColor={hexOf(barColor[p] as string)} />
+                  <Box width={1} justifyContent="flex-end">
+                    <Box width="17%" backgroundColor={hexOf(barColor[p] as string)} />
+                  </Box>
                   {draw(p, w - 1)}
                 </Box>
               ) : (
