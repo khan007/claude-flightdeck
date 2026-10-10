@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.28
+
+- Desktop: the context bar is sized for 8.3px per column instead of 7.2, so it runs the full width under the percentage.
+
 ## 0.3.27
 
 - Desktop: the bright accent is part of the card now: a line down the inside of its left border that curves along the top and bottom borders at its ends. The accent's SVG pieces carry a real `alt` (an SVG with an empty one may not draw).

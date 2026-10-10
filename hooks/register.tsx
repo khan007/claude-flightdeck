@@ -742,7 +742,7 @@ export const register: Register = (on, options) => {
             {u.costUsd !== null ? tile(tileW, 'SESSION COST', <Text color={C.gate} bold>{fmtUsd(u.costUsd)}</Text>) : null}
           </Box>
           {u.pct !== null ? ctxHead : null}
-          {u.pct !== null ? segBar(u.pct, Math.round((w - 4) * 7.2), ctxHot ? C.warn : C.main, 'Context window') : null}
+          {u.pct !== null ? segBar(u.pct, Math.round((w - 4) * 8.3), ctxHot ? C.warn : C.main, 'Context window') : null}
           {u.limits.length > 0 ? (
             <Box justifyContent="space-between">
               {u.limits.slice(0, 2).map(l => {
