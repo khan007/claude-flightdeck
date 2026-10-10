@@ -656,21 +656,6 @@ export const register: Register = (on, options) => {
     // Desktop: card borders are dark; a bright bar of the panel's colour stands beside each card (see `column`).
     const dimEdge = (color: string) => tintOf(color, 0.25)
 
-    // Terminal frames carry their title (and a status) on the top border, as a titled box does.
-    const onBorder = (left: unknown, right?: unknown) => [
-      <Box key="bl" position="absolute" top={-1} left={1}>
-        {left}
-      </Box>,
-      right ? (
-        <Box key="br" position="absolute" top={-1} right={1}>
-          {right}
-        </Box>
-      ) : null,
-    ]
-    const borderTitle = (text: string, color: string) => (
-      <Text color={color} bold wrap="truncate">{` ${text} `}</Text>
-    )
-
     // ---- main
     const effortN = { low: 1, medium: 2, high: 3, xhigh: 4, max: 4 }[m.effort] ?? 0
     const effortName = { low: 'LOW', medium: 'MED', high: 'HIGH', xhigh: 'XHIGH', max: 'MAX' }[m.effort] ?? '—'
@@ -758,7 +743,10 @@ export const register: Register = (on, options) => {
         </Box>
       ) : (
         <Box flexDirection="column" borderStyle="round" borderColor={C.main} paddingX={1} width={w}>
-          {onBorder(borderTitle(coreTitle, C.main), working)}
+          <Box justifyContent="space-between">
+            <Text color={C.main} bold wrap="truncate">{coreTitle}</Text>
+            {working}
+          </Box>
           <Box justifyContent="space-between">
             <Text wrap="truncate">
               <Text dimColor>Effort: </Text>
@@ -919,7 +907,12 @@ export const register: Register = (on, options) => {
               </Text>
             </Box>
           ) : null}
-          {isDesk ? null : onBorder(borderTitle(`${mark}${gateTitle} PERMISSIONS`, C.gate), <Text dimColor>{` ${s.total} CHECKS TOTAL `}</Text>)}
+          {isDesk ? null : (
+            <Box justifyContent="space-between">
+              <Text color={C.gate} bold wrap="truncate">{`${mark}${gateTitle} PERMISSIONS`}</Text>
+              <Text dimColor>{`${s.total} CHECKS TOTAL`}</Text>
+            </Box>
+          )}
           {isDesk ? (strip.length === 0 ? <Text color={C.faint}>no checks yet</Text> : null) : stripRow}
           {isDesk ? (
             <Box flexDirection="column">
@@ -939,13 +932,11 @@ export const register: Register = (on, options) => {
             </Box>
           ) : (
             <Box flexDirection="column">
-              {w >= 80 ? (
-                <Box justifyContent="flex-end">
-                  <Text color={C.dim}>{`${okN} OK${s.ask > 0 ? ` / ${s.ask} PENDING` : ''}`}</Text>
-                </Box>
-              ) : null}
+              <Box justifyContent="flex-end">
+                <Text color={C.dim}>{`${okN} OK${s.ask > 0 ? ` / ${s.ask} PENDING` : ''}`}</Text>
+              </Box>
               <Box flexWrap="wrap" columnGap={1}>
-                {(w >= 60 || tallies.every(x => x.n === 0) ? tallies : tallies.filter(x => x.n > 0)).map(x => (
+                {tallies.map(x => (
                   <Text color={x.n > 0 ? x.c : C.dim}>{`[${x.icon} ${x.n} ${x.label[0].toUpperCase()}${x.label.slice(1)}]`}</Text>
                 ))}
               </Box>
@@ -1171,17 +1162,17 @@ export const register: Register = (on, options) => {
               <Text color={live ? C.cleared : C.dim}>{live ? '● STREAM' : '○ IDLE'}</Text>
             </Box>
           ) : null}
-          {isDesk
-            ? null
-            : onBorder(
-                <Box>
-                  <Text color={C.dim} bold wrap="truncate">{` ${mark}LIVE BUFFER${viewed ? ' · THIS AGENT' : ''}`}</Text>
-                  {live ? <Text color={C.main} bold>{' [TURN '}</Text> : null}
-                  {live ? clock('turn-log-clock', t.startedAt, null, C.main) : null}
-                  {live ? <Text color={C.main} bold>{'] '}</Text> : <Text> </Text>}
-                </Box>,
-                <Text color={live ? C.cleared : C.dim}>{live ? ' ● STREAM ' : ' ○ IDLE '}</Text>,
-              )}
+          {isDesk ? null : (
+            <Box justifyContent="space-between">
+              <Box>
+                <Text color={C.dim} bold wrap="truncate">{`${mark}LIVE BUFFER${viewed ? ' · THIS AGENT' : ''}`}</Text>
+                {live ? <Text color={C.dim} bold>{' [TURN '}</Text> : null}
+                {live ? clock('turn-log-clock', t.startedAt, null, C.dim) : null}
+                {live ? <Text color={C.dim} bold>{']'}</Text> : null}
+              </Box>
+              <Text color={live ? C.cleared : C.dim}>{live ? '● STREAM' : '○ IDLE'}</Text>
+            </Box>
+          )}
           {lines}
         </Box>
       )
@@ -1204,7 +1195,9 @@ export const register: Register = (on, options) => {
           {isDesk ? (
             chip(`FLEET [${fl.rows.length} ACTIVE]`, C.agent)
           ) : null}
-          {isDesk ? null : onBorder(borderTitle(`${mark}FLEET [${fl.rows.length} ACTIVE]`, C.main))}
+          {isDesk ? null : (
+            <Text color={C.main} bold wrap="truncate">{`${mark}FLEET [${fl.rows.length} ACTIVE]`}</Text>
+          )}
           <Box>
             <Box flexGrow={1}>
               <Text dimColor>{'  WORKER / ID'}</Text>
@@ -1305,7 +1298,7 @@ export const register: Register = (on, options) => {
 
     // The desktop draws boxes with no gap where a terminal row leaves one: give the unlinked boxes a row of air.
     const gap = e.surface !== 'terminal'
-    // Panels with the flow between them; the agents panel draws its own rails.
+    // Panels stack directly; only the agents panel draws rails (its fan-out and merge).
     // Desktop: a rounded end for the accent bar, so its ends are round instead of square.
     const accentCap = (color: string, isTop: boolean) => {
       const { Svg } = $.ui.resolve(e)
@@ -1325,14 +1318,8 @@ export const register: Register = (on, options) => {
     const column = (ps: Panel[], w: number) => (
       <Box flexDirection="column" width={w}>
         {ps.map((p, i) => {
-          const prev = ps[i - 1]
-          const link =
-            i === 0 || p === 'agents' || prev === 'agents' || p === 'log' || p === 'fleet' || prev === 'fleet' || p === 'loops' || prev === 'loops'
-              ? null
-              : rail(`link-${p}`, p === 'architect' ? advising : m.isRunning, p === 'architect' ? C.arch : C.main, w)
           return (
             <Box flexDirection="column" marginTop={gap && (i === 0 || (i > 0 && (p === 'fleet' || p === 'log'))) ? 1 : 0}>
-              {link}
               {draw(p, w)}
               {p === 'agents' ? expandedPanel(w) : null}
             </Box>
