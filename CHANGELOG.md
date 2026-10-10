@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.38
+
+- Terminal: the gate's check strip and `N OK` really share a row; the fleet's cost column is sized to its numbers, so it no longer wraps; the fleet's title and border use the fleet colour.
+- Desktop: the turn receipt is a card like the others (title tab `THIS TURN` / `LAST TURN`); the agent cards fill the width of the agents card.
+
 ## 0.3.37
 
 - The agents panel is a card like the others (title tab and accent on desktop, a boxed section in the terminal); the dotted fan-out and merge connectors are gone. The `motion` setting no longer has anything to animate.

@@ -909,8 +909,10 @@ export const register: Register = (on, options) => {
             strip.length === 0 ? <Text color={C.faint}>no checks yet</Text> : null
           ) : (
             <Box justifyContent="space-between">
-              {stripRow}
-              <Text color={C.dim}>{`${okN} OK${s.ask > 0 ? ` / ${s.ask} PENDING` : ''}`}</Text>
+              <Box flexGrow={1}>{stripRow}</Box>
+              <Box flexShrink={0}>
+                <Text color={C.dim}>{`${okN} OK${s.ask > 0 ? ` / ${s.ask} PENDING` : ''}`}</Text>
+              </Box>
             </Box>
           )}
           {isDesk ? (
@@ -962,8 +964,8 @@ export const register: Register = (on, options) => {
       update($, view, x => ({ ...normalize(DEFAULT_VIEW, x), expanded: normalize(DEFAULT_VIEW, x).expanded === id ? null : id }))
 
     const agentsPanel = (w: number) => {
-      // The agents sit in a card like the other panels; its content is 4 columns narrower (border and padding).
-      const iw = w - 4
+      // The agents sit in a card like the other panels; its content is narrower by the padding, and in the terminal by the border too.
+      const iw = isDesk ? w - 3 : w - 4
       // Cards need 20 columns each; when the card can't hold the limit, lanes take over.
       const fit = Math.max(1, Math.min(cfg.maxCards, Math.floor((iw + 1) / 21)))
       const useLanes = cards.length > fit
@@ -1097,7 +1099,17 @@ export const register: Register = (on, options) => {
     const receiptPanel = (w: number) => {
       const isReview = t.isReviewing
       return (
-        <Box flexDirection="column" borderStyle="round" borderColor={C.main} borderDimColor={!m.isRunning && !isReview} paddingX={1} width={w}>
+        <Box
+          flexDirection="column"
+          borderStyle="round"
+          borderColor={isDesk ? dimEdge(C.main) : C.main}
+          backgroundColor={isDesk ? tintOf(C.main) : undefined}
+          borderDimColor={!isDesk && !m.isRunning && !isReview}
+          paddingX={1}
+          width={w}
+        >
+          {isDesk ? accent(C.main) : null}
+          {isDesk ? tab(m.isRunning ? 'THIS TURN' : 'LAST TURN', C.main) : null}
           {m.isRunning ? (
             <Box>
               <Text color={C.main} wrap="truncate">{`◐ back to ${modelName.toLowerCase()} · turn `}</Text>
@@ -1183,18 +1195,20 @@ export const register: Register = (on, options) => {
     const fleetTotal = fl.rows.reduce((sum, x) => sum + x.costUsd, 0)
     const fleetPanel = (w: number) => {
       const showIdle = w >= 56
-      const costW = w >= 64 ? 24 : 20
+      // "$" + run, " / " + today, " / " + all, and a "+": as wide as the longest number needs
+      const digits = Math.max(4, ...fl.rows.slice(0, 6).flatMap(x => [x.runCostUsd, x.todayCostUsd, x.costUsd].map(n => n.toFixed(2).length)))
+      const costW = 3 * digits + 8
       const idleW = showIdle ? 8 : 0
       const stateW = 7
       // inside the frame: 2 border + 2 padding, then the dot, the costs, the idle time and the state chip
       const room = Math.max(6, w - 4 - 2 - costW - idleW - stateW)
       const stateColor = (st: string) => (st === 'busy' ? C.amber : st === 'waiting' ? C.cleared : C.gate)
       return (
-        <Box flexDirection="column" borderStyle="round" borderColor={isDesk ? dimEdge(C.agent) : C.faint} backgroundColor={isDesk ? tintOf(C.agent) : undefined} paddingX={1} width={w}>
+        <Box flexDirection="column" borderStyle="round" borderColor={isDesk ? dimEdge(C.agent) : C.agent} backgroundColor={isDesk ? tintOf(C.agent) : undefined} paddingX={1} width={w}>
           {isDesk ? accent(C.agent) : null}
           {isDesk ? tab(`FLEET [${fl.rows.length} ACTIVE]`, C.agent) : null}
           {isDesk ? null : (
-            <Text color={C.main} bold wrap="truncate">{`${mark}FLEET [${fl.rows.length} ACTIVE]`}</Text>
+            <Text color={C.agent} bold wrap="truncate">{`${mark}FLEET [${fl.rows.length} ACTIVE]`}</Text>
           )}
           <Box>
             <Box flexGrow={1}>
@@ -1317,7 +1331,7 @@ export const register: Register = (on, options) => {
       <Box flexDirection="column" width={w}>
         {ps.map((p, i) => {
           return (
-            <Box flexDirection="column" marginTop={gap ? (p === 'main' || p === 'gate' || p === 'fleet' || p === 'log' || p === 'agents' ? 2 : 1) : 0}>
+            <Box flexDirection="column" marginTop={gap ? (p === 'main' || p === 'gate' || p === 'fleet' || p === 'log' || p === 'agents' || p === 'receipt' ? 2 : 1) : 0}>
               {draw(p, w)}
               {p === 'agents' ? expandedPanel(w) : null}
             </Box>
