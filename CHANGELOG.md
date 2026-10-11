@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.41
+
+- Simpler pane: the agents panel (and the `agents (N)` pill) hides once no agent has run for 10 minutes and returns when one starts; fleet sessions with no activity for 2 hours are dropped from the list (a session waiting for you always stays).
+- Desktop: the effort / requests / cost tiles use short labels when the pane is narrow.
+
 ## 0.3.40
 
 - Desktop: fleet state chips are softer: `IDLE` has a faint tint and normal weight; `BUSY` and `WAIT` keep a stronger tint and bold.

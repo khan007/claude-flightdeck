@@ -62,6 +62,8 @@ import {
   shorten,
   startConsult,
   stateOf,
+  agentsStale,
+  fleetLive,
   waitHint,
   waitingCount,
   stepLoop,
@@ -604,7 +606,7 @@ export const register: Register = (on, options) => {
       main: false,
       architect: !showArchitect,
       gate: g.recent.length === 0 && gateSummary(g).total === 0,
-      agents: cards.length === 0,
+      agents: cards.length === 0 || agentsStale(cards, now), // hidden once nothing has run for a while
       loops: lp.length === 0,
       receipt: !m.isRunning && !r,
       fleet: !cfg.fleet, // shown while enabled, even while loading or failing, so a problem is visible
@@ -708,14 +710,14 @@ export const register: Register = (on, options) => {
           <Box columnGap={1}>
             {tile(
               tileW,
-              'EFFORT LEVEL',
+              tileW < 14 ? 'EFFORT' : 'EFFORT LEVEL',
               <Text wrap="truncate">
                 <Text color={C.main}>{'▮'.repeat(effortN) + '▯'.repeat(4 - effortN)} </Text>
                 <Text color={C.main} bold>{effortName}</Text>
               </Text>,
             )}
-            {tile(tileW, 'REQUESTS', <Text bold>{`${m.steps} req`}</Text>)}
-            {u.costUsd !== null ? tile(tileW, 'SESSION COST', <Text color={C.gate} bold>{fmtUsd(u.costUsd)}</Text>) : null}
+            {tile(tileW, tileW < 14 ? 'REQ' : 'REQUESTS', <Text bold>{`${m.steps} req`}</Text>)}
+            {u.costUsd !== null ? tile(tileW, tileW < 14 ? 'COST' : 'SESSION COST', <Text color={C.gate} bold>{fmtUsd(u.costUsd)}</Text>) : null}
           </Box>
           {u.pct !== null ? ctxHead : null}
           {u.pct !== null ? segBar(u.pct, Math.round((w - 4) * 8.3), ctxHot ? C.warn : C.main, 'Context window') : null}
@@ -1194,12 +1196,14 @@ export const register: Register = (on, options) => {
 
     // ---- fleet: running sessions with their estimated cost (from the user's fleet script)
     const kindColors = [C.agent, C.main, C.gate] // run, today, all
-    const waitingN = waitingCount(fl.rows)
-    const fleetTotal = fl.rows.reduce((sum, x) => sum + x.costUsd, 0)
+    // Sessions idle for 2 hours are dropped, except those waiting for you.
+    const liveRows = fleetLive(fl.rows)
+    const waitingN = waitingCount(liveRows)
+    const fleetTotal = liveRows.reduce((sum, x) => sum + x.costUsd, 0)
     const fleetPanel = (w: number) => {
       const showIdle = w >= 56
       // "$" + run, " / " + today, " / " + all, and a "+": as wide as the longest number needs
-      const digits = Math.max(4, ...fl.rows.slice(0, 6).flatMap(x => [x.runCostUsd, x.todayCostUsd, x.costUsd].map(n => n.toFixed(2).length)))
+      const digits = Math.max(4, ...liveRows.slice(0, 6).flatMap(x => [x.runCostUsd, x.todayCostUsd, x.costUsd].map(n => n.toFixed(2).length)))
       const costW = 3 * digits + 8
       const idleW = showIdle ? 8 : 0
       const stateW = 7
@@ -1209,9 +1213,9 @@ export const register: Register = (on, options) => {
       return (
         <Box flexDirection="column" borderStyle="round" borderColor={isDesk ? dimEdge(C.agent) : C.agent} backgroundColor={isDesk ? tintOf(C.agent) : undefined} paddingX={1} width={w}>
           {isDesk ? accent(C.agent) : null}
-          {isDesk ? tab(`FLEET [${fl.rows.length} ACTIVE${waitingN > 0 ? ` · ${waitingN} WAITING` : ''}]`, waitingN > 0 ? C.amber : C.agent) : null}
+          {isDesk ? tab(`FLEET [${liveRows.length} ACTIVE${waitingN > 0 ? ` · ${waitingN} WAITING` : ''}]`, waitingN > 0 ? C.amber : C.agent) : null}
           {isDesk ? null : (
-            <Text color={C.agent} bold wrap="truncate">{`${mark}FLEET [${fl.rows.length} ACTIVE${waitingN > 0 ? ` · ${waitingN} WAITING` : ''}]`}</Text>
+            <Text color={C.agent} bold wrap="truncate">{`${mark}FLEET [${liveRows.length} ACTIVE${waitingN > 0 ? ` · ${waitingN} WAITING` : ''}]`}</Text>
           )}
           <Box>
             <Box flexGrow={1}>
@@ -1234,7 +1238,8 @@ export const register: Register = (on, options) => {
             </Box>
           </Box>
           {fl.rows.length === 0 && !fl.error ? <Text dimColor>loading…</Text> : null}
-          {fl.rows.slice(0, 6).map(x => {
+          {fl.rows.length > 0 && liveRows.length === 0 ? <Text dimColor>no session active in the last 2 hours</Text> : null}
+          {liveRows.slice(0, 6).map(x => {
             // run / today / all in their own colours; equal neighbours merge into one number in the wider kind's colour
             const groups: { v: string; c: string }[] = []
             ;[x.runCostUsd, x.todayCostUsd, x.costUsd].forEach((n, i) => {
@@ -1287,7 +1292,7 @@ export const register: Register = (on, options) => {
               </Box>
             )
           })}
-          {fl.rows.length > 6 ? <Text dimColor>{`+${fl.rows.length - 6} more`}</Text> : null}
+          {liveRows.length > 6 ? <Text dimColor>{`+${liveRows.length - 6} more`}</Text> : null}
           {fl.error ? <Text color={C.warn}>{`refresh failed: ${fl.error}`}</Text> : null}
           <Box justifyContent="space-between">
             <Text wrap="truncate">
@@ -1354,7 +1359,7 @@ export const register: Register = (on, options) => {
 
     // Desktop draws the agents' time axis as SVG under the panels.
     const svgLanes =
-      e.surface !== 'terminal' && cards.length > 0
+      e.surface !== 'terminal' && !isEmpty.agents
         ? (() => {
             const { Svg } = $.ui.resolve(e)
             const rowH = 18
@@ -1482,7 +1487,7 @@ export const register: Register = (on, options) => {
         </Box>
         <Box columnGap={1}>
           {waitingN > 0 ? <Text color={C.amber} bold backgroundColor={tintOf(C.amber, 0.2)}>{` ${waitingN} waiting `}</Text> : null}
-          {cards.length > 0 ? <Text color={C.agent} backgroundColor={tintOf(C.agent, 0.16)}>{` agents (${cards.length}) `}</Text> : null}
+          {!isEmpty.agents ? <Text color={C.agent} backgroundColor={tintOf(C.agent, 0.16)}>{` agents (${cards.length}) `}</Text> : null}
         </Box>
       </Box>
     ) : (
@@ -1499,7 +1504,7 @@ export const register: Register = (on, options) => {
         </Text>
         <Box columnGap={1}>
           {waitingN > 0 ? <Text color={C.amber} bold>{`${waitingN} waiting`}</Text> : null}
-          {cards.length > 0 ? <Text color={C.agent}>{`agents (${cards.length})`}</Text> : null}
+          {!isEmpty.agents ? <Text color={C.agent}>{`agents (${cards.length})`}</Text> : null}
         </Box>
       </Box>
     )

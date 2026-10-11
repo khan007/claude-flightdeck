@@ -33,6 +33,10 @@ import {
   promptLine,
   quotaName,
   stateOf,
+  agentsStale,
+  fleetLive,
+  FLEET_IDLE_MS,
+  AGENTS_HIDE_MS,
   waitHint,
   waitingCount,
   handbackOf,
@@ -553,4 +557,26 @@ test('waiting sessions are counted and explain themselves', () => {
   expect(waitHint(rows[1])).toBe('input needed')
   expect(waitHint(rows[2])).toBe('waiting')
   expect(waitHint(rows[0])).toBe('')
+})
+
+test('idle fleet sessions drop after two hours, waiting ones stay', () => {
+  const rows = [
+    { status: 'idle', idleMs: 1000 },
+    { status: 'idle', idleMs: FLEET_IDLE_MS - 1 },
+    { status: 'idle', idleMs: FLEET_IDLE_MS },
+    { status: 'busy', idleMs: 5 },
+    { status: 'waiting', idleMs: FLEET_IDLE_MS * 3 },
+  ]
+  expect(fleetLive(rows).map(r => r.status)).toEqual(['idle', 'idle', 'busy', 'waiting'])
+  expect(fleetLive([])).toEqual([])
+})
+
+test('the agents panel hides once no agent has run for a while, and returns with a running one', () => {
+  const now = 10_000_000
+  const done = (endedAt: number) => ({ status: 'done', spawnedAt: endedAt - 5000, endedAt })
+  expect(agentsStale([], now)).toBe(false)
+  expect(agentsStale([done(now - 1000)], now)).toBe(false)
+  expect(agentsStale([done(now - AGENTS_HIDE_MS - 1)], now)).toBe(true)
+  expect(agentsStale([done(now - AGENTS_HIDE_MS - 1), { status: 'running', spawnedAt: now - 99, endedAt: null }], now)).toBe(false)
+  expect(agentsStale([done(now - AGENTS_HIDE_MS - 1), done(now - 1000)], now)).toBe(false)
 })

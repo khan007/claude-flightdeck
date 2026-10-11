@@ -351,6 +351,19 @@ export const blocks = (pct: number, width: number) => {
 /** A fleet row's status as a four-letter chip: busy, waiting or idle. */
 export const stateOf = (status: string) => (status === 'busy' ? 'BUSY' : status === 'waiting' ? 'WAIT' : status === 'idle' ? 'IDLE' : status.slice(0, 4).toUpperCase() || '?')
 
+/** A fleet session with no activity for this long is dropped from the pane (unless it is waiting for you). */
+export const FLEET_IDLE_MS = 2 * 60 * 60 * 1000
+/** With no agent running, the agents panel hides once the last one finished this long ago. */
+export const AGENTS_HIDE_MS = 10 * 60 * 1000
+
+/** The fleet rows worth showing: recently active, or waiting for you however long ago it stopped. */
+export const fleetLive = <R extends { status: string; idleMs: number }>(rows: R[]): R[] =>
+  rows.filter(r => r.status === 'waiting' || r.idleMs < FLEET_IDLE_MS)
+
+/** True when agents exist but none is running and the newest finished more than AGENTS_HIDE_MS ago. */
+export const agentsStale = (cards: { status: string; spawnedAt: number; endedAt: number | null }[], now: number) =>
+  cards.length > 0 && cards.every(c => c.status !== 'running') && now - Math.max(...cards.map(c => c.endedAt ?? c.spawnedAt)) > AGENTS_HIDE_MS
+
 /** How many fleet sessions are stopped and asking for you. */
 export const waitingCount = (rows: { status: string }[]) => rows.filter(r => r.status === 'waiting').length
 
