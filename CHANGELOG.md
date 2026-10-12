@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.42
+
+- Less repetition. Status: the `WORKING` pill, the model name in the core title and the `Role` line are gone, and the turn card shows only for the last finished turn (the header and the buffer's timer cover a running one). Gateway: no separate check-count line. Agents: no `N total`, no `agents (N)` header pill, no `N agents` in the last-turn line. Waiting: it shows as the header pill and the `WAIT` chip with its reason, not also in the fleet title and the buffer.
+
 ## 0.3.41
 
 - Simpler pane: the agents panel (and the `agents (N)` pill) hides once no agent has run for 10 minutes and returns when one starts; fleet sessions with no activity for 2 hours are dropped from the list (a session waiting for you always stays).

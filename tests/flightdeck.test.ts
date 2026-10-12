@@ -282,7 +282,7 @@ test('/clear starts the pane fresh', async ($, on) => {
 test('colours come from the theme by default, raw hex only when asked', async ($, on) => {
   engine(on)
   const ui = await $.ui.mount({ ...pane(64), surface: 'terminal' })
-  const title = await ui.find({ type: 'Text', text: /AGENT CORE \[[^\]]*\]\s*$/ })
+  const title = await ui.find({ type: 'Text', text: /AGENT CORE\s*$/ })
   expect(title?.props.color).toBe('claude')
   await ui.unmount()
 })
@@ -290,7 +290,7 @@ test('colours come from the theme by default, raw hex only when asked', async ($
 test('pastel keeps the fixed dark-terminal colours', { options: { palette: 'pastel' } }, async ($, on) => {
   engine(on)
   const ui = await $.ui.mount({ ...pane(64), surface: 'terminal' })
-  expect((await ui.find({ type: 'Text', text: /AGENT CORE \[[^\]]*\]\s*$/ }))?.props.color).toBe('#7dd3fc')
+  expect((await ui.find({ type: 'Text', text: /AGENT CORE\s*$/ }))?.props.color).toBe('#7dd3fc')
   await ui.unmount()
 })
 
@@ -313,7 +313,7 @@ test('subagents become cards, then swimlanes past the card limit; a card expands
   await $.agent.spawn(spawn('general-purpose', 'Review the parser'))
   for (const surface of ['terminal', 'desktop'] as const) {
     const lanesUi = await $.ui.mount({ ...pane(64), surface })
-    expect(await lanesUi.find({ text: /4 total/ })).toBeDefined()
+    expect(JSON.stringify(await lanesUi.drawn())).toMatch(/AGENTS/)
     expect(await lanesUi.find({ text: /━/ })).toBeDefined()
     await lanesUi.unmount()
   }
@@ -350,7 +350,7 @@ test('the gate strip fills from checks and a row opens its redacted drill-down',
   await $.tool.check({ tool: 'Read', input: { file_path: '/a/b.ts' }, tool_use_id: 'k1' })
   await $.tool.check({ tool: 'Bash', input: { command: 'curl -H "Authorization: Bearer abcdefgh12345" api' }, tool_use_id: 'k2' })
   const ui = await $.ui.mount({ ...pane(64), surface: 'terminal' })
-  expect(await ui.find({ text: /2 CHECKS/ })).toBeDefined()
+  expect(await ui.find({ text: /1 OK \/ 1 PENDING/ })).toBeDefined()
   expect(await ui.find({ text: /1 Pending/ })).toBeDefined()
   await ui.press({ key: 'gate-shell' })
   expect(await ui.find({ text: /Authorization: Bearer •••/ })).toBeDefined()
@@ -456,7 +456,7 @@ test('the gate reads as a compact tally on the desktop and as boxed pills in the
   await $.tool.check({ tool: 'Bash', input: { command: 'ls' }, tool_use_id: 'd2' })
   const desk = await $.ui.mount({ ...pane(64), surface: 'desktop' })
   expect(await desk.find({ text: /1 OK/ })).toBeDefined()
-  expect(await desk.find({ text: /2 CHECKS:/ })).toBeDefined()
+  expect(await desk.find({ text: /1 allowed/ })).toBeDefined()
   expect(await desk.find({ text: /1 pending/ })).toBeDefined()
   await desk.unmount()
 })

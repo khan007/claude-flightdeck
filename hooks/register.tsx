@@ -608,7 +608,7 @@ export const register: Register = (on, options) => {
       gate: g.recent.length === 0 && gateSummary(g).total === 0,
       agents: cards.length === 0 || agentsStale(cards, now), // hidden once nothing has run for a while
       loops: lp.length === 0,
-      receipt: !m.isRunning && !r,
+      receipt: m.isRunning ? !t.isReviewing : !r, // the live turn is the header and the buffer's timer; the card is for the last one
       fleet: !cfg.fleet, // shown while enabled, even while loading or failing, so a problem is visible
       log: false,
     }
@@ -658,7 +658,7 @@ export const register: Register = (on, options) => {
     const effortN = { low: 1, medium: 2, high: 3, xhigh: 4, max: 4 }[m.effort] ?? 0
     const effortName = { low: 'LOW', medium: 'MED', high: 'HIGH', xhigh: 'XHIGH', max: 'MAX' }[m.effort] ?? '—'
     const ctxHot = u.pct !== null && u.pct >= 80
-    const coreTitle = `${mark}AGENT CORE [${modelName.toUpperCase()}]`
+    const coreTitle = `${mark}AGENT CORE`
     const winK = `${Math.round(u.window / 1000)}k`
     const ctxBar = (width: number) => {
       const b = blocks(u.pct ?? 0, width)
@@ -681,11 +681,6 @@ export const register: Register = (on, options) => {
         <Text color={ctxHot ? C.warn : isDesk ? C.amber : C.gate} bold>{`[${Math.round(u.pct ?? 0)}%]`}</Text>
       </Box>
     )
-    const working = (
-      <Text color={m.isRunning ? C.cleared : C.dim} bold={isDesk} backgroundColor={isDesk ? tintOf(m.isRunning ? C.gate : 'subtle', 0.16) : undefined}>
-        {isDesk ? (m.isRunning ? ' ● WORKING ' : ' ○ IDLE ') : m.isRunning ? '● working' : '○ idle'}
-      </Text>
-    )
     const tile = (width: number, label: string, body: unknown) => (
       <Box flexDirection="column" borderStyle="round" borderColor={C.faint} paddingX={1} width={width}>
         <Text dimColor wrap="truncate">{label}</Text>
@@ -701,12 +696,12 @@ export const register: Register = (on, options) => {
         <Box flexDirection="column" borderStyle="round" borderColor={dimEdge(C.main)} backgroundColor={tintOf(C.main)} paddingX={1} width={w}>
           {accent(C.main)}
           {tab(coreTitle, C.main)}
-          <Box justifyContent="flex-end">{working}</Box>
-          <Text wrap="truncate">
-            <Text dimColor>{'Role: Primary Reasoner'}</Text>
-            {m.mode ? <Text dimColor>{' · Mode: '}</Text> : null}
-            {m.mode ? <Text color={C.amber} bold>{m.mode.toUpperCase()}</Text> : null}
-          </Text>
+          {m.mode ? (
+            <Text wrap="truncate">
+              <Text dimColor>{'Mode: '}</Text>
+              <Text color={C.amber} bold>{m.mode.toUpperCase()}</Text>
+            </Text>
+          ) : null}
           <Box columnGap={1}>
             {tile(
               tileW,
@@ -739,10 +734,7 @@ export const register: Register = (on, options) => {
         </Box>
       ) : (
         <Box flexDirection="column" borderStyle="round" borderColor={C.main} paddingX={1} width={w}>
-          <Box justifyContent="space-between">
-            <Text color={C.main} bold wrap="truncate">{coreTitle}</Text>
-            {working}
-          </Box>
+          <Text color={C.main} bold wrap="truncate">{coreTitle}</Text>
           <Box justifyContent="space-between">
             <Text wrap="truncate">
               <Text dimColor>Effort: </Text>
@@ -904,10 +896,7 @@ export const register: Register = (on, options) => {
             </Box>
           ) : null}
           {isDesk ? null : (
-            <Box justifyContent="space-between">
-              <Text color={C.gate} bold wrap="truncate">{`${mark}${gateTitle} PERMISSIONS`}</Text>
-              <Text dimColor>{`${s.total} CHECKS TOTAL`}</Text>
-            </Box>
+            <Text color={C.gate} bold wrap="truncate">{`${mark}${gateTitle} PERMISSIONS`}</Text>
           )}
           {isDesk ? (
             strip.length === 0 ? <Text color={C.faint}>no checks yet</Text> : null
@@ -921,7 +910,6 @@ export const register: Register = (on, options) => {
           )}
           {isDesk ? (
             <Box flexDirection="column">
-              <Text dimColor>{`${s.total} CHECKS:`}</Text>
               <Text wrap="truncate">
                 {tallies.every(x => x.n === 0) ? <Text color={C.faint}>none yet</Text> : null}
                 {tallies
@@ -985,11 +973,7 @@ export const register: Register = (on, options) => {
           {isDesk ? accent(C.agent) : null}
           {isDesk ? tab(`AGENTS [${running.length} RUNNING]`, C.agent) : null}
           <Box justifyContent="space-between">
-            {isDesk ? (
-              <Text dimColor>{`${cards.length} total`}</Text>
-            ) : (
-              <Text color={C.agent} bold wrap="truncate">{`${mark}AGENTS · ${running.length} running · ${cards.length} total`}</Text>
-            )}
+            {isDesk ? <Text> </Text> : <Text color={C.agent} bold wrap="truncate">{`${mark}AGENTS · ${running.length} running`}</Text>}
             {cards.length > 0 ? <Text color={C.faint}>1-{Math.min(cards.length, useLanes ? 6 : fit)} expand</Text> : null}
           </Box>
           {body}
@@ -1123,7 +1107,7 @@ export const register: Register = (on, options) => {
           ) : r ? (
             <Text wrap="truncate">
               <Text color={r.reason === 'answer' ? C.gate : C.warn}>{r.reason === 'answer' ? '✓ ' : '✗ '}</Text>
-              <Text>{`last turn ${fmtDuration(r.durationMs)} · ${plural(r.agents, 'agent')} · ${plural(r.edits, 'edit')} · ${plural(r.errors, 'error')}`}</Text>
+              <Text>{`last turn ${fmtDuration(r.durationMs)} · ${plural(r.edits, 'edit')} · ${plural(r.errors, 'error')}`}</Text>
               {r.costDelta !== null ? <Text color={C.main}>{` · +${fmtUsd(r.costDelta)}`}</Text> : null}
             </Text>
           ) : (
@@ -1161,7 +1145,6 @@ export const register: Register = (on, options) => {
               </Text>
             </Box>
           ))}
-          {s.ask > 0 ? <Text color={C.amber}>{'❯ awaiting your permission'}</Text> : null}
         </Box>
       )
       return (
@@ -1213,9 +1196,9 @@ export const register: Register = (on, options) => {
       return (
         <Box flexDirection="column" borderStyle="round" borderColor={isDesk ? dimEdge(C.agent) : C.agent} backgroundColor={isDesk ? tintOf(C.agent) : undefined} paddingX={1} width={w}>
           {isDesk ? accent(C.agent) : null}
-          {isDesk ? tab(`FLEET [${liveRows.length} ACTIVE${waitingN > 0 ? ` · ${waitingN} WAITING` : ''}]`, waitingN > 0 ? C.amber : C.agent) : null}
+          {isDesk ? tab(`FLEET [${liveRows.length} ACTIVE]`, C.agent) : null}
           {isDesk ? null : (
-            <Text color={C.agent} bold wrap="truncate">{`${mark}FLEET [${liveRows.length} ACTIVE${waitingN > 0 ? ` · ${waitingN} WAITING` : ''}]`}</Text>
+            <Text color={C.agent} bold wrap="truncate">{`${mark}FLEET [${liveRows.length} ACTIVE]`}</Text>
           )}
           <Box>
             <Box flexGrow={1}>
@@ -1439,7 +1422,7 @@ export const register: Register = (on, options) => {
           {lp.length > 0 ? <Text dimColor>{`other loops ${lp.length} · ${lp.filter(l => isLoopActive(l, now)).length} active`}</Text> : null}
           {!m.isRunning && r ? (
             <Text dimColor wrap="truncate">
-              {`last turn ${fmtDuration(r.durationMs)} · ${plural(r.agents, 'agent')} · ${plural(r.edits, 'edit')} · ${plural(r.errors, 'error')}${r.costDelta !== null ? ` · +${fmtUsd(r.costDelta)}` : ''}`}
+              {`last turn ${fmtDuration(r.durationMs)} · ${plural(r.edits, 'edit')} · ${plural(r.errors, 'error')}${r.costDelta !== null ? ` · +${fmtUsd(r.costDelta)}` : ''}`}
             </Text>
           ) : null}
         </Box>
@@ -1487,7 +1470,6 @@ export const register: Register = (on, options) => {
         </Box>
         <Box columnGap={1}>
           {waitingN > 0 ? <Text color={C.amber} bold backgroundColor={tintOf(C.amber, 0.2)}>{` ${waitingN} waiting `}</Text> : null}
-          {!isEmpty.agents ? <Text color={C.agent} backgroundColor={tintOf(C.agent, 0.16)}>{` agents (${cards.length}) `}</Text> : null}
         </Box>
       </Box>
     ) : (
@@ -1504,7 +1486,6 @@ export const register: Register = (on, options) => {
         </Text>
         <Box columnGap={1}>
           {waitingN > 0 ? <Text color={C.amber} bold>{`${waitingN} waiting`}</Text> : null}
-          {!isEmpty.agents ? <Text color={C.agent}>{`agents (${cards.length})`}</Text> : null}
         </Box>
       </Box>
     )

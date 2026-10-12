@@ -1,6 +1,6 @@
 # TODO — Flightdeck restyle (fork khan007/claude-flightdeck, branch `strip-fix`)
 
-Last updated: 2026-10-10 (end of day). Plugin version **0.3.41** (0.3.40 and earlier pushed). Working tree clean when this was written.
+Last updated: 2026-10-10 (end of day). Plugin version **0.3.42** (0.3.40 and earlier pushed; 0.3.41 and 0.3.42 local). Working tree clean when this was written.
 
 ## Setup (done)
 - Cloned `khan007/claude-flightdeck` (branch `strip-fix`) and `khan007/fleet` into `~/git`; both validated and installed from those local folders (user scope: `flightdeck@claude-flightdeck`, `fleet@fleet`).
@@ -23,6 +23,7 @@ Improve on the initial design (v0.3.13 look) so that **desktop** looks like the 
 - Context bar width estimate (`(w - 4) * 8.3` px) — could be slightly short or long.
 
 ## Open ideas / to do tomorrow
+- (done in 0.3.42) Removed duplicated info: WORKING pill, model name in core title, Role line, THIS TURN card while running, N CHECKS line, agents N total / header pill / `N agents` in last turn, WAITING in fleet title and buffer line. Check what's still redundant (e.g. session cost in core vs fleet row, mini layout).
 - (done in 0.3.41) Agents panel hides 10 min after the last agent finishes; fleet drops sessions idle 2 h (constants `AGENTS_HIDE_MS`, `FLEET_IDLE_MS` in core.ts; could become settings). Check the thresholds feel right. Narrow-pane layout (~30 columns) is cramped: names truncate hard, quota row wraps.
 - (done in 0.3.40) Fleet `IDLE` chip softened; check how it looks on screen.
 - Tab placement: `TAB_DROP = 7` px, `TAB_BG = '#1b1a19'` (assumes a dark pane; a light theme would show dark tabs). Make it theme-aware if needed.
