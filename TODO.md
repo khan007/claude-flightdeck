@@ -1,6 +1,6 @@
 # TODO — Flightdeck restyle (fork khan007/claude-flightdeck, branch `strip-fix`)
 
-Last updated: 2026-10-10 (end of day). Plugin version **0.3.42** (0.3.40 and earlier pushed; 0.3.41 and 0.3.42 local). Working tree clean when this was written.
+Last updated: 2026-10-10 (end of day). Plugin version **0.3.42**, all pushed (`0a35e98`). Working tree clean when this was written.
 
 ## Setup (done)
 - Cloned `khan007/claude-flightdeck` (branch `strip-fix`) and `khan007/fleet` into `~/git`; both validated and installed from those local folders (user scope: `flightdeck@claude-flightdeck`, `fleet@fleet`).
@@ -21,6 +21,10 @@ Improve on the initial design (v0.3.13 look) so that **desktop** looks like the 
 - Terminal 0.3.38/0.3.39: gate strip + `N OK` on one row, fleet cost no longer wraps, fleet colour.
 - Desktop receipt card tab (`THIS TURN` / `LAST TURN`) and agent cards filling the agents card (`iw = w - 3`).
 - Context bar width estimate (`(w - 4) * 8.3` px) — could be slightly short or long.
+
+## Session note (2026-10-12)
+- `/reload-plugins` in a running session does NOT apply pane changes (and printed "1 error during load" with nothing shown in `/plugin`; flightdeck and fleet both pass `claude plugin validate`). Cache copy `~/.claude/plugins/cache/claude-flightdeck/flightdeck/0.3.42` equals the repo. To see a new version: start a NEW session / reopen the app and check the pane header version.
+- First thing next session: confirm the header says `v0.3.42`, then look at the pane (duplicates removed in 0.3.42; stale agents panel and 2h-idle fleet rows hidden in 0.3.41) and send a screenshot to tune.
 
 ## Open ideas / to do tomorrow
 - (done in 0.3.42) Removed duplicated info: WORKING pill, model name in core title, Role line, THIS TURN card while running, N CHECKS line, agents N total / header pill / `N agents` in last turn, WAITING in fleet title and buffer line. Check what's still redundant (e.g. session cost in core vs fleet row, mini layout).
