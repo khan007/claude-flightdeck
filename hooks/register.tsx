@@ -1156,9 +1156,7 @@ export const register: Register = (on, options) => {
                     </Text>
                   </Box>
                   {isCut || l.full ? (
-                    <Button key={`logbtn-${k}`} plain onPress={toggle}>
-                      <Text color={l.kind === 'error' ? C.warn : C.text}>{`${isOpen ? '▾ ' : ''}${shorten(l.text, textRoom - (isOpen ? 2 : 0))}`}</Text>
-                    </Button>
+                    <Button key={`logbtn-${k}`} plain label={`${isOpen ? '▾ ' : ''}${shorten(l.text, textRoom - (isOpen ? 2 : 0))}`} onPress={toggle} />
                   ) : (
                     <Text color={l.kind === 'error' ? C.warn : C.text} wrap="truncate">
                       {l.text}
