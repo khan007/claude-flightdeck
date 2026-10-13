@@ -27,6 +27,9 @@ import {
   titleLines,
   consultTimeline,
   describeInput,
+  fullLine,
+  lineKey,
+  pageSlice,
   endConsult,
   fmtClock,
   fmtDuration,
@@ -167,9 +170,9 @@ async function migrate($: EngineInterface) {
   await update($, meta, () => ({ schemaVersion: SCHEMA_VERSION }))
 }
 
-async function say($: EngineInterface, who: string, text: string, kind: LogLine['kind'] = 'info', agentId: string | null = null) {
-  const line: LogLine = { at: await $.clock.now(), who, text, kind, agentId }
-  await update($, log, list => [...normalizeLog(list), line].slice(-60))
+async function say($: EngineInterface, who: string, text: string, kind: LogLine['kind'] = 'info', agentId: string | null = null, full = '') {
+  const line: LogLine = { at: await $.clock.now(), who, text, full: full === text ? '' : full, kind, agentId }
+  await update($, log, list => [...normalizeLog(list), line].slice(-150))
 }
 
 async function refreshStatus($: EngineInterface, cfg: Config) {
@@ -210,13 +213,13 @@ async function consultEnded($: EngineInterface, cfg: Config, advice: string | nu
   const text = first ? shorten(first.replace(/^[#>*\s-]+/, ''), 160) : null
   await update($, architect, a => endConsult(normalize(DEFAULT_ARCHITECT, a), at, text, id))
   await update($, turn, t => ({ ...normalize(DEFAULT_TURN, t), isReviewing: false }))
-  await say($, cfg.architectLabel.toLowerCase(), text ? `advice: ${shorten(text, 60)}` : 'advice returned', 'consult')
+  await say($, cfg.architectLabel.toLowerCase(), text ? `advice: ${shorten(text, 60)}` : 'advice returned', 'consult', null, text ? `advice: ${fullLine(text)}` : '')
   await refreshStatus($, cfg)
 }
 
 async function noteAdvice($: EngineInterface, cfg: Config, advice: string) {
   await update($, architect, x => ({ ...normalize(DEFAULT_ARCHITECT, x), lastAdvice: advice }))
-  await say($, cfg.architectLabel.toLowerCase(), `advice: ${shorten(advice, 60)}`, 'consult')
+  await say($, cfg.architectLabel.toLowerCase(), `advice: ${shorten(advice, 60)}`, 'consult', null, `advice: ${fullLine(advice)}`)
 }
 
 async function isArchitectType($: EngineInterface, cfg: Config, type: string) {
@@ -356,7 +359,7 @@ export const register: Register = (on, options) => {
       if (advice && advice !== a.lastAdvice) await noteAdvice($, cfg, advice)
     } else if (e.text) {
       const p = promptLine(e.text)
-      await say($, p.who, p.text)
+      await say($, p.who, p.text, 'info', null, p.who === 'you' ? fullLine(e.text) : '')
     }
     return next(e)
   })
@@ -460,7 +463,8 @@ export const register: Register = (on, options) => {
     if (isEdit || hasFailed || (!e.agentId && t0.errorStreak > 0)) {
       await update($, turn, t => afterCall(normalize(DEFAULT_TURN, t), { inSubagent: Boolean(e.agentId), hasFailed, isEdit }))
     }
-    const text = shorten(describeInput(e.tool, e), 64)
+    const desc = describeInput(e.tool, e)
+    const text = shorten(desc, 64)
     if (e.agentId) {
       const id = e.agentId
       await update($, agents, list =>
@@ -470,9 +474,9 @@ export const register: Register = (on, options) => {
       )
     }
     // The log keeps what is worth a glance: refusals, errors and edits; the rest is on the cards.
-    if (ran.deny !== undefined) await say($, await whoIs($, e.agentId), `${text}  denied`, 'error', e.agentId ?? null)
-    else if (hasFailed) await say($, await whoIs($, e.agentId), `${text}  ✗`, 'error', e.agentId ?? null)
-    else if (isEdit) await say($, await whoIs($, e.agentId), text, 'info', e.agentId ?? null)
+    if (ran.deny !== undefined) await say($, await whoIs($, e.agentId), `${text}  denied`, 'error', e.agentId ?? null, `${fullLine(desc)}  denied`)
+    else if (hasFailed) await say($, await whoIs($, e.agentId), `${text}  ✗`, 'error', e.agentId ?? null, `${fullLine(desc)}  ✗`)
+    else if (isEdit) await say($, await whoIs($, e.agentId), text, 'info', e.agentId ?? null, fullLine(desc))
     if (isSettled || !didRun) await refreshStatus($, cfg)
     return ran
   })
@@ -1122,29 +1126,65 @@ export const register: Register = (on, options) => {
     const used = 2 + 5 + (showArchitect ? 6 : 0) + 6 + (v.gateOpen ? 5 : 0) + (cards.length > cfg.maxCards ? 3 + Math.min(6, cards.length) : 8) + (expandedCard ? 8 : 0) + (lp.length ? 1 : 0) + 3
     const bodyRows = e.props.scroll?.bodyRows ?? e.viewport?.rows ?? 40
     const nLog = logRows(bodyRows, used)
-    const shownLines = (viewed ? lines.filter(l => l.agentId === viewed) : lines).slice(-nLog)
+    const logAll = viewed ? lines.filter(l => l.agentId === viewed) : lines
+    const pg = pageSlice(logAll, nLog, v.logPage)
+    const shownLines = pg.items
     const colorOf = (l: LogLine) =>
       l.kind === 'error' ? C.warn : l.kind === 'consult' ? C.arch : l.who === 'main' ? C.main : l.who === 'gate' ? C.gate : l.who === 'you' ? C.text : C.agent
     const logPanel = (w: number) => {
       const live = m.isRunning && t.startedAt > 0
+      // the text column: the card, the inset box (desktop) and the time and who columns take the rest
+      const textRoom = Math.max(8, w - 4 - (isDesk ? 4 : 0) - 22)
       const lines = (
         <Box flexDirection="column" borderStyle={isDesk ? 'round' : undefined} borderColor={C.faint} backgroundColor={isDesk ? '#00000040' : undefined} paddingX={isDesk ? 1 : 0}>
           {shownLines.length === 0 ? <Text color={C.faint}>nothing yet</Text> : null}
-          {shownLines.map(l => (
-            <Box>
-              <Box width={9} flexShrink={0}>
-                <Text color={C.faint}>{fmtClock(l.at)}</Text>
+          {shownLines.map(l => {
+            const k = lineKey(l)
+            const isOpen = v.logOpen === k
+            const whole = l.full || l.text
+            const isCut = whole.length > textRoom
+            const toggle = () => update($, view, x => ({ ...normalize(DEFAULT_VIEW, x), logOpen: normalize(DEFAULT_VIEW, x).logOpen === k ? null : k }))
+            return (
+              <Box key={`line-${k}`} flexDirection="column">
+                <Box>
+                  <Box width={9} flexShrink={0}>
+                    <Text color={C.faint}>{fmtClock(l.at)}</Text>
+                  </Box>
+                  <Box width={13} flexShrink={0}>
+                    <Text color={colorOf(l)} bold wrap="truncate">
+                      {`[${shorten(l.who, 10)}]`}
+                    </Text>
+                  </Box>
+                  {isCut || l.full ? (
+                    <Button key={`logbtn-${k}`} plain onPress={toggle}>
+                      <Text color={l.kind === 'error' ? C.warn : C.text}>{`${isOpen ? '▾ ' : ''}${shorten(l.text, textRoom - (isOpen ? 2 : 0))}`}</Text>
+                    </Button>
+                  ) : (
+                    <Text color={l.kind === 'error' ? C.warn : C.text} wrap="truncate">
+                      {l.text}
+                    </Text>
+                  )}
+                </Box>
+                {isOpen ? (
+                  <Box paddingLeft={22}>
+                    <Text color={C.dim} wrap="wrap">{whole}</Text>
+                  </Box>
+                ) : null}
+                {isDesk && isCut && !isOpen ? (
+                  <Box position="absolute" top={1} left={2} width={Math.max(20, w - 10)} display="none" hover={{ display: 'flex' }} borderStyle="round" borderColor={C.faint} backgroundColor={TAB_BG} paddingX={1}>
+                    <Text wrap="wrap">{whole}</Text>
+                  </Box>
+                ) : null}
               </Box>
-              <Box width={13} flexShrink={0}>
-                <Text color={colorOf(l)} bold wrap="truncate">
-                  {`[${shorten(l.who, 10)}]`}
-                </Text>
-              </Box>
-              <Text color={l.kind === 'error' ? C.warn : C.text} wrap="truncate">
-                {l.text}
-              </Text>
+            )
+          })}
+          {pg.pages > 1 ? (
+            <Box justifyContent="space-between">
+              <Button plain hotkey="b" label="◂ older" dimColor={pg.page >= pg.pages - 1} onPress={() => update($, view, x => ({ ...normalize(DEFAULT_VIEW, x), logPage: Math.min(pg.pages - 1, pg.page + 1) }))} />
+              <Text dimColor>{`page ${pg.page + 1}/${pg.pages}`}</Text>
+              <Button plain hotkey="n" label="newer ▸" dimColor={pg.page <= 0} onPress={() => update($, view, x => ({ ...normalize(DEFAULT_VIEW, x), logPage: Math.max(0, pg.page - 1) }))} />
             </Box>
-          ))}
+          ) : null}
         </Box>
       )
       return (

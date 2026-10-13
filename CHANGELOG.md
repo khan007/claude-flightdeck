@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.43
+
+- Live buffer: each line keeps its whole text (masked, up to 400 characters) and the buffer keeps 150 lines. A cut line can be pressed to open its full text under it (terminal and desktop); on the desktop, hovering a cut line shows a card with the whole text. When the lines do not fit, `◂ older` / `newer ▸` (keys `b` / `n`) page through them.
+
 ## 0.3.42
 
 - Less repetition. Status: the `WORKING` pill, the model name in the core title and the `Role` line are gone, and the turn card shows only for the last finished turn (the header and the buffer's timer cover a running one). Gateway: no separate check-count line. Agents: no `N total`, no `agents (N)` header pill, no `N agents` in the last-turn line. Waiting: it shows as the header pill and the `WAIT` chip with its reason, not also in the fleet title and the buffer.

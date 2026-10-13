@@ -37,6 +37,10 @@ import {
   fleetLive,
   FLEET_IDLE_MS,
   AGENTS_HIDE_MS,
+  fullLine,
+  lineKey,
+  pageSlice,
+  FULL_MAX,
   waitHint,
   waitingCount,
   handbackOf,
@@ -157,7 +161,7 @@ test('config is read leniently: bad values fall back to defaults', () => {
 })
 
 test('state saved under an older shape still reads', () => {
-  expect(normalizeLog([{ at: '08:00:00', who: 'jev', text: 'x' }])[0]).toEqual({ at: 0, who: 'jev', text: 'x', agentId: null, kind: 'info' })
+  expect(normalizeLog([{ at: '08:00:00', who: 'jev', text: 'x' }])[0]).toEqual({ at: 0, who: 'jev', text: 'x', full: '', agentId: null, kind: 'info' })
   const g = normalizeGate({ file: { allow: 1 } }) // v1 gate shape
   expect(g.recent).toEqual([])
   expect(g.totals.shell.rule).toBe(0)
@@ -579,4 +583,44 @@ test('the agents panel hides once no agent has run for a while, and returns with
   expect(agentsStale([done(now - AGENTS_HIDE_MS - 1)], now)).toBe(true)
   expect(agentsStale([done(now - AGENTS_HIDE_MS - 1), { status: 'running', spawnedAt: now - 99, endedAt: null }], now)).toBe(false)
   expect(agentsStale([done(now - AGENTS_HIDE_MS - 1), done(now - 1000)], now)).toBe(false)
+})
+
+test('the log pages newest first, clamped, and keeps a masked, capped full text', () => {
+  const all = Array.from({ length: 10 }, (_, i) => i)
+  expect(pageSlice(all, 4, 0)).toEqual({ items: [6, 7, 8, 9], pages: 3, page: 0 })
+  expect(pageSlice(all, 4, 1).items).toEqual([2, 3, 4, 5])
+  expect(pageSlice(all, 4, 2).items).toEqual([0, 1])
+  expect(pageSlice(all, 4, 9).page).toBe(2) // past the end: the oldest page
+  expect(pageSlice(all, 4, -3).page).toBe(0)
+  expect(pageSlice([], 4, 0)).toEqual({ items: [], pages: 1, page: 0 })
+  expect(fullLine('curl -H "Authorization: Bearer abc.def.ghi123"\n  x')).not.toContain('abc.def')
+  expect(fullLine('a\n\n  b')).toBe('a b')
+  expect(fullLine('x'.repeat(FULL_MAX + 50)).length).toBe(FULL_MAX)
+  expect(lineKey({ at: 5, who: 'you', text: 't' })).toBe('5|you|t')
+})
+
+test('a long log line expands on press and the log pages', async ($, on) => {
+  engine(on)
+  const long = 'please review the whole diff of the pane and then run every test we have ' + 'and explain the result '.repeat(8)
+  for (let i = 0; i < 11; i++) await $.turn.start({ text: `prompt number ${i}`, turnId: `P${i}` })
+  await $.turn.start({ text: long, turnId: 'PL' })
+  const ui = await $.ui.mount({ ...pane(64), surface: 'terminal' })
+  expect(JSON.stringify(await ui.drawn())).toMatch(/page 1\//) // more lines than fit: paged
+  expect(JSON.stringify(await ui.drawn())).not.toContain('explain the result and explain') // the line is cut
+  const btn = await ui.find({ type: 'Button', text: /please review/ })
+  expect(btn).toBeDefined()
+  await ui.press({ key: btn?.props.key as string })
+  expect(JSON.stringify(await ui.drawn())).toContain('explain the result and explain') // now whole
+  await ui.press({ key: '◂ older' }) // older page: the long line is no longer on show
+  expect(await ui.find({ type: 'Button', text: /please review/ })).toBeUndefined()
+  await ui.unmount()
+})
+
+test('on the desktop a cut log line carries a hover card with its whole text', async ($, on) => {
+  engine(on)
+  const long = 'please review the whole diff of the pane and then run every test we have ' + 'and explain the result '.repeat(8)
+  await $.turn.start({ text: long, turnId: 'H1' })
+  const ui = await $.ui.mount({ ...pane(64), surface: 'desktop' }) // the engine refuses a tree with a prop it does not allow
+  expect(JSON.stringify(await ui.drawn())).toContain('explain the result and explain')
+  await ui.unmount()
 })

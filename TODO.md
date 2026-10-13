@@ -1,6 +1,6 @@
 # TODO — Flightdeck restyle (fork khan007/claude-flightdeck, branch `strip-fix`)
 
-Last updated: 2026-10-10 (end of day). Plugin version **0.3.42**, all pushed (`0a35e98`). Working tree clean when this was written.
+Last updated: 2026-10-10 (end of day). Plugin version **0.3.43** (0.3.42 and earlier pushed). Working tree clean when this was written.
 
 ## Setup (done)
 - Cloned `khan007/claude-flightdeck` (branch `strip-fix`) and `khan007/fleet` into `~/git`; both validated and installed from those local folders (user scope: `flightdeck@claude-flightdeck`, `fleet@fleet`).
@@ -27,6 +27,7 @@ Improve on the initial design (v0.3.13 look) so that **desktop** looks like the 
 - First thing next session: confirm the header says `v0.3.42`, then look at the pane (duplicates removed in 0.3.42; stale agents panel and 2h-idle fleet rows hidden in 0.3.41) and send a screenshot to tune.
 
 ## Open ideas / to do tomorrow
+- (done in 0.3.43, not yet seen on screen) Live buffer: full text per line (400 chars, masked), press a cut line to expand, desktop hover card, `b`/`n` paging, 150 lines kept. Check: does the hover card show and clip well near the bottom of the pane; does a pressed line's Button truncate right; are `b`/`n` free of hotkey clashes. Re-architecture to make the pane more informative is planned next.
 - (done in 0.3.42) Removed duplicated info: WORKING pill, model name in core title, Role line, THIS TURN card while running, N CHECKS line, agents N total / header pill / `N agents` in last turn, WAITING in fleet title and buffer line. Check what's still redundant (e.g. session cost in core vs fleet row, mini layout).
 - (done in 0.3.41) Agents panel hides 10 min after the last agent finishes; fleet drops sessions idle 2 h (constants `AGENTS_HIDE_MS`, `FLEET_IDLE_MS` in core.ts; could become settings). Check the thresholds feel right. Narrow-pane layout (~30 columns) is cramped: names truncate hard, quota row wraps.
 - (done in 0.3.40) Fleet `IDLE` chip softened; check how it looks on screen.

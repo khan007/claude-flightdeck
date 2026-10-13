@@ -39,7 +39,7 @@ export const DEFAULT_ARCHITECT: Architect = { consults: [], ids: [], seen: [], l
 const ZERO: Tally = { rule: 0, ask: 0, cleared: 0, deny: 0 }
 export const DEFAULT_GATE: Gate = { recent: [], totals: { file: ZERO, shell: ZERO, other: ZERO } }
 export const DEFAULT_TURN: Turn = { edits: 0, errorStreak: 0, errors: 0, isReviewing: false, startedAt: 0, costAtStart: null }
-export const DEFAULT_VIEW: View = { expanded: null, gateOpen: null, layout: null }
+export const DEFAULT_VIEW: View = { expanded: null, gateOpen: null, layout: null, logOpen: null, logPage: 0 }
 export const DEFAULT_ROSTER: Roster = { architectTypes: [] }
 
 const isObject = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v)
@@ -85,9 +85,27 @@ export const normalizeLog = (stored: unknown): LogLine[] =>
     at: typeof l.at === 'number' ? l.at : 0,
     who: String(l.who ?? ''),
     text: String(l.text ?? ''),
+    full: String(l.full ?? ''),
     agentId: typeof l.agentId === 'string' ? l.agentId : null,
     kind: l.kind === 'error' || l.kind === 'consult' || l.kind === 'done' ? l.kind : 'info',
   }))
+
+/** How much of a log line's whole text is kept for expanding and hovering. */
+export const FULL_MAX = 400
+
+/** A log line's whole text on one line, credentials masked, capped at FULL_MAX. */
+export const fullLine = (s: string) => redact(s.replace(/\s+/g, ' ').trim()).slice(0, FULL_MAX)
+
+/** A log line's identity, for expanding it: the time, who said it and what. */
+export const lineKey = (l: { at: number; who: string; text: string }) => `${l.at}|${l.who}|${l.text}`
+
+/** One page of `all`, newest page 0: the lines to draw, the page count and the page used (clamped). */
+export const pageSlice = <T>(all: T[], per: number, page: number) => {
+  const pages = Math.max(1, Math.ceil(all.length / per))
+  const p = Math.max(0, Math.min(page, pages - 1))
+  const end = all.length - p * per
+  return { items: all.slice(Math.max(0, end - per), end), pages, page: p }
+}
 
 // ---------------------------------------------------------------- config
 

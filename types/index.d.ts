@@ -62,6 +62,8 @@ export type LogLine = {
   at: number
   who: string
   text: string
+  /** The line's whole text (masked, up to 400 characters), for expanding and hovering; empty when `text` is all there is. */
+  full: string
   agentId: string | null
   kind: 'info' | 'error' | 'consult' | 'done'
 }
@@ -86,7 +88,7 @@ export type Receipt = {
 
 export type Layout = 'auto' | 'compact' | 'wide' | 'mini'
 
-export type View = { expanded: string | null; gateOpen: Bucket | null; layout: Layout | null }
+export type View = { expanded: string | null; gateOpen: Bucket | null; layout: Layout | null; logOpen: string | null; logPage: number }
 
 export type Roster = { architectTypes: string[] }
 
