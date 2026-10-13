@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.44
+
+- Live buffer: a cut or expandable line passes its text to the Button as `label` (PR 1), the form every engine accepts. Cut error lines are no longer drawn in red.
+
 ## 0.3.43
 
 - Live buffer: each line keeps its whole text (masked, up to 400 characters) and the buffer keeps 150 lines. A cut line can be pressed to open its full text under it (terminal and desktop); on the desktop, hovering a cut line shows a card with the whole text. When the lines do not fit, `◂ older` / `newer ▸` (keys `b` / `n`) page through them.

@@ -1,6 +1,6 @@
 # TODO — Flightdeck restyle (fork khan007/claude-flightdeck, branch `strip-fix`)
 
-Last updated: 2026-10-10 (end of day). Plugin version **0.3.43** (0.3.42 and earlier pushed). Working tree clean when this was written.
+Last updated: 2026-10-10 (end of day). Plugin version **0.3.44** (0.3.43 and earlier pushed; PR 1 merged, the 0.3.44 bump is local). Working tree clean when this was written.
 
 ## Setup (done)
 - Cloned `khan007/claude-flightdeck` (branch `strip-fix`) and `khan007/fleet` into `~/git`; both validated and installed from those local folders (user scope: `flightdeck@claude-flightdeck`, `fleet@fleet`).
@@ -27,6 +27,7 @@ Improve on the initial design (v0.3.13 look) so that **desktop** looks like the 
 - First thing next session: confirm the header says `v0.3.42`, then look at the pane (duplicates removed in 0.3.42; stale agents panel and 2h-idle fleet rows hidden in 0.3.41) and send a screenshot to tune.
 
 ## Next: re-architecture
+PR 1 (khan007/claude-flightdeck#1, log line Button label) is merged. Its claim that `strip-fix` failed 4 tests did not reproduce on Claude Code 2.1.296 (40/40 before and after); the merge is still the safer form. Check the live buffer in a new session at 0.3.44 (cut lines, press-to-expand, hover card, `b`/`n` paging).
 See `docs/rearchitecture-plan.md` and `DECISIONS.md`. Phase 1 (characterisation tests, then extract theme/ and state/events with no output change) is next; the row budget is the one open question.
 
 ## Open ideas / to do tomorrow
